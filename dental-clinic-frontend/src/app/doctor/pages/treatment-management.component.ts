@@ -1,6 +1,6 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -40,6 +40,7 @@ export class TreatmentManagementComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   patients: TreatmentPatientSummary[] = [];
   treatments: Treatment[] = [];
@@ -199,6 +200,7 @@ export class TreatmentManagementComponent implements OnInit {
     this.service.getPatientTreatments(patient.id).subscribe({
       next: (treatments) => {
         this.treatments = treatments;
+        this.cdr.markForCheck();
         if (treatments.length) this.openTreatment(treatments[0]);
         else this.startNewTreatment();
       },
@@ -274,6 +276,7 @@ export class TreatmentManagementComponent implements OnInit {
       this.showError(error, 'Could not save the treatment data.');
     } finally {
       this.savingPlan = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -383,7 +386,10 @@ export class TreatmentManagementComponent implements OnInit {
       notes: procedure.notes,
     };
     this.service.updateProcedure(procedure.id, payload).subscribe({
-      next: () => this.selectedTreatment && this.refreshSelectedTreatment(),
+      next: () => {
+        this.refreshSelectedTreatment();
+        this.loadPatients();
+      },
       error: (error) => this.showError(error, 'Could not update the procedure.'),
     });
   }
@@ -392,7 +398,9 @@ export class TreatmentManagementComponent implements OnInit {
     this.service.deleteProcedure(procedure.id).subscribe({
       next: () => {
         this.procedures = this.procedures.filter((item) => item.id !== procedure.id);
+        this.cdr.markForCheck();
         this.refreshSelectedTreatment();
+        this.loadPatients();
         this.notify('Procedure deleted.');
       },
       error: (error) => this.showError(error, 'Could not delete the procedure.'),
@@ -467,6 +475,7 @@ export class TreatmentManagementComponent implements OnInit {
       .subscribe({
         next: (photo) => {
           this.photos = [photo, ...this.photos];
+          this.cdr.markForCheck();
           this.photoForm.reset({ photoType: 'BEFORE', fileName: '', url: '', description: '' });
           this.notify('Photo saved.');
         },
@@ -525,6 +534,7 @@ export class TreatmentManagementComponent implements OnInit {
       .subscribe({
         next: (entry) => {
           this.timeline = [entry, ...this.timeline];
+          this.cdr.markForCheck();
           this.historyForm.reset({ title: '', description: '' });
           this.notify('Visit note saved.');
         },
@@ -551,9 +561,11 @@ export class TreatmentManagementComponent implements OnInit {
       next: (patients) => {
         this.patients = patients;
         this.patientsLoading = false;
+        this.cdr.markForCheck();
       },
       error: (error) => {
         this.patientsLoading = false;
+        this.cdr.markForCheck();
         this.patientsError = 'Could not load clients.';
         this.showError(error, this.patientsError);
       },
@@ -562,26 +574,41 @@ export class TreatmentManagementComponent implements OnInit {
 
   private loadCatalog(query = '', includeInactive = false): void {
     this.service.searchCatalog(query, includeInactive).subscribe({
-      next: (catalog) => (this.catalog = catalog),
+      next: (catalog) => {
+        this.catalog = catalog;
+        this.cdr.markForCheck();
+      },
       error: (error) => this.showError(error, 'Could not load the treatment catalog.'),
     });
   }
 
   private loadTreatmentDetails(treatmentId: number): void {
     this.service.getProcedures(treatmentId).subscribe({
-      next: (items) => (this.procedures = items),
+      next: (items) => {
+        this.procedures = items;
+        this.cdr.markForCheck();
+      },
       error: (error) => this.showError(error, 'Could not load procedures.'),
     });
     this.service.getTimeline(treatmentId).subscribe({
-      next: (items) => (this.timeline = items),
+      next: (items) => {
+        this.timeline = items;
+        this.cdr.markForCheck();
+      },
       error: (error) => this.showError(error, 'Could not load the visit timeline.'),
     });
     this.service.getPhotos(treatmentId).subscribe({
-      next: (items) => (this.photos = items),
+      next: (items) => {
+        this.photos = items;
+        this.cdr.markForCheck();
+      },
       error: (error) => this.showError(error, 'Could not load photos.'),
     });
     this.service.getPrescriptions(treatmentId).subscribe({
-      next: (items) => (this.prescriptions = items),
+      next: (items) => {
+        this.prescriptions = items;
+        this.cdr.markForCheck();
+      },
       error: (error) => this.showError(error, 'Could not load prescriptions.'),
     });
   }
@@ -591,8 +618,10 @@ export class TreatmentManagementComponent implements OnInit {
     this.service.getTreatment(this.selectedTreatment.id).subscribe({
       next: (treatment) => {
         this.selectedTreatment = treatment;
+        this.treatments = this.treatments.map((item) => (item.id === treatment.id ? treatment : item));
         this.patchTreatmentForm(treatment);
         this.loadTreatmentDetails(treatment.id);
+        this.cdr.markForCheck();
       },
       error: (error) => this.showError(error, 'Could not refresh the treatment.'),
     });
@@ -601,6 +630,7 @@ export class TreatmentManagementComponent implements OnInit {
   private async reloadPatientTreatments(selectedId: number): Promise<void> {
     if (!this.selectedPatient) return;
     this.treatments = await firstValueFrom(this.service.getPatientTreatments(this.selectedPatient.id));
+    this.cdr.markForCheck();
     const selected = this.treatments.find((item) => item.id === selectedId) ?? this.treatments[0];
     if (selected) this.openTreatment(selected);
     this.loadPatients();
@@ -695,9 +725,13 @@ export class TreatmentManagementComponent implements OnInit {
 
   private notify(message: string): void {
     this.toast = message;
+    this.cdr.markForCheck();
     if (isPlatformBrowser(this.platformId)) {
       window.setTimeout(() => {
-        if (this.toast === message) this.toast = '';
+        if (this.toast === message) {
+          this.toast = '';
+          this.cdr.markForCheck();
+        }
       }, 4000);
     }
   }
