@@ -1,0 +1,21 @@
+package com.example.demo.entity;
+
+public enum ExpenseCategory {
+    DENTAL_MATERIALS,
+    LABORATORY,
+    MAINTENANCE,
+    ELECTRICITY,
+    INTERNET,
+    WATER,
+    SALARIES,
+    TAXES,
+    CLEANING,
+    EQUIPMENT,
+    MARKETING,
+    MISCELLANEOUS,
+    WATER_BILL,
+    ELECTRICITY_BILL,
+    INTERNET_BILL,
+    PATENTE_BILL,
+    UNEXPECTED_MAINTENANCE
+}

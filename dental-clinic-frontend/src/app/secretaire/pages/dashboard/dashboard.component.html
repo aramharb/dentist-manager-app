@@ -1,0 +1,68 @@
+<section class="page fade-in" *ngIf="currentUser$ | async as user">
+  <nav class="breadcrumb" aria-label="Breadcrumb">DentaCare Pro / {{ user.role }} / Dashboard</nav>
+  <div class="page-title">
+    <div>
+      <p class="eyebrow">{{ user.role === 'doctor' ? 'Clinical overview' : 'Front desk overview' }}</p>
+      <h1>Welcome back, {{ user.fullName }}</h1>
+      <p class="page-subtitle" *ngIf="user.role === 'doctor'">
+        Your assigned schedule, active treatment workload, patients, and unread team messages.
+      </p>
+      <p class="page-subtitle" *ngIf="user.role === 'secretaire'">
+        Today's clinic schedule, waiting patients, administrative workload, and unread team messages.
+      </p>
+      <button class="ghost-button refresh-button" type="button" (click)="refresh()" [disabled]="loading">
+        {{ loading ? 'Refreshing...' : 'Refresh dashboard' }}
+      </button>
+    </div>
+    <figure class="session-profile">
+      <span>{{ initials(user.fullName) }}</span>
+      <figcaption><strong>{{ user.fullName }}</strong><small>{{ user.role }}</small></figcaption>
+    </figure>
+  </div>
+
+  <p class="dashboard-error" *ngIf="error">{{ error }}</p>
+
+  <ng-container *ngIf="dashboard as data">
+    <div class="stat-grid" *ngIf="user.role === 'doctor'">
+      <article class="stat-card"><span>My appointments today</span><strong>{{ data.todayAppointments }}</strong><small>Matched to {{ user.fullName }}</small></article>
+      <article class="stat-card cyan"><span>My next 7 days</span><strong>{{ data.upcomingAppointments }}</strong><small>Upcoming assigned visits</small></article>
+      <article class="stat-card mint"><span>Treatments in progress</span><strong>{{ data.treatmentsInProgress }}</strong><small>Clinical workload</small></article>
+      <article class="stat-card amber"><span>Unread messages</span><strong>{{ data.unreadMessages }}</strong><small>Personal inbox</small></article>
+    </div>
+
+    <div class="stat-grid" *ngIf="user.role === 'secretaire'">
+      <article class="stat-card"><span>Appointments today</span><strong>{{ data.todayAppointments }}</strong><small>Clinic-wide schedule</small></article>
+      <article class="stat-card cyan"><span>Next 7 days</span><strong>{{ data.upcomingAppointments }}</strong><small>Scheduling workload</small></article>
+      <article class="stat-card mint"><span>Patients waiting</span><strong>{{ data.waitingPatients }}</strong><small>Scheduled or confirmed today</small></article>
+      <article class="stat-card amber"><span>Unread messages</span><strong>{{ data.unreadMessages }}</strong><small>Personal inbox</small></article>
+    </div>
+
+    <div class="metric-grid">
+      <article class="summary-card"><span>Total patients</span><strong>{{ data.totalPatients }}</strong><small>Clinic records</small></article>
+      <article class="summary-card"><span>Authenticated as</span><strong>{{ user.username }}</strong><small>{{ user.role }}</small></article>
+      <article class="summary-card"><span>Dashboard date</span><strong>{{ data.date | date:'mediumDate' }}</strong><small>Live backend data</small></article>
+    </div>
+
+    <div class="dashboard-grid">
+      <article class="panel wide">
+        <div class="section-heading">
+          <h2>{{ user.role === 'doctor' ? 'My upcoming patients' : 'Upcoming clinic schedule' }}</h2>
+          <span>{{ data.appointments.length }} shown</span>
+        </div>
+        <div class="appointment-list" *ngIf="data.appointments.length; else emptyAppointments">
+          <article class="appointment-item" *ngFor="let appointment of data.appointments">
+            <time>{{ appointment.date | date:'MMM d' }} · {{ appointment.time }}</time>
+            <div><strong>{{ appointment.patientName }}</strong><small>{{ appointment.providerName }}</small></div>
+            <span class="pill">{{ appointment.status }}</span>
+          </article>
+        </div>
+        <ng-template #emptyAppointments><p class="empty-state">No appointments are assigned in the next seven days.</p></ng-template>
+      </article>
+
+      <article class="panel">
+        <div class="section-heading"><h2>Session permissions</h2><span>{{ user.permissions.length }}</span></div>
+        <div class="permission-list"><span class="pill" *ngFor="let permission of user.permissions">{{ permission }}</span></div>
+      </article>
+    </div>
+  </ng-container>
+</section>

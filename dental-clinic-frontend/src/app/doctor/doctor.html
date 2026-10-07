@@ -1,0 +1,141 @@
+<div class="secretary-shell doctor-shell" [class.mobile-nav-open]="mobileMenuOpen" [class.dark-mode]="darkMode">
+  <div class="shell-backdrop" *ngIf="mobileMenuOpen" (click)="mobileMenuOpen = false"></div>
+
+  <aside class="sidebar" [class.open]="mobileMenuOpen">
+    <div class="sidebar-brand">
+      <a class="brand" routerLink="/doctor/dashboard" aria-label="Doctor home">
+        <span class="logo">DW</span>
+        <div>
+          <strong>DentaCare Pro</strong>
+          <small>Doctor command center</small>
+        </div>
+      </a>
+      <button class="icon-button sidebar-close" type="button" (click)="mobileMenuOpen = false" aria-label="Close navigation">
+        <app-clinic-icon name="close"></app-clinic-icon>
+      </button>
+    </div>
+
+    <div class="sidebar-card accent">
+      <p class="eyebrow">Today's clinical brief</p>
+      <strong>{{ dashboard?.todayAppointments ?? 0 }} visits scheduled</strong>
+      <span>{{ dashboard?.totalPatients ?? 0 }} clients assigned to you</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <app-secretary-nav-item *ngFor="let item of navItems" [icon]="item.icon" [label]="item.label" [link]="item.link" (navigate)="navigate($event)" />
+    </nav>
+
+    <div class="sidebar-card support">
+      <p class="eyebrow">Owner</p>
+      <strong>{{ doctor.fullName }}</strong>
+      <span>{{ doctor.role }}</span>
+      <button class="ghost-button full-width" type="button" routerLink="/doctor/appointments">Open planning</button>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <button class="hamburger icon-button" type="button" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Toggle navigation">
+        <app-clinic-icon name="menu"></app-clinic-icon>
+      </button>
+
+      <div class="hero-copy">
+        <p class="eyebrow">Doctor workspace</p>
+        <h1>Clinical command center</h1>
+        <p>Your patients, schedule, treatments, and clinic operations.</p>
+      </div>
+
+      <div class="search-shell">
+        <app-clinic-icon name="search"></app-clinic-icon>
+        <input #globalSearch type="search" [(ngModel)]="searchQuery" (focus)="openSearch()" (input)="openSearch()" placeholder="Search clients, visits, or materials" aria-label="Global search" />
+        <kbd>Ctrl K</kbd>
+        <div class="search-results" *ngIf="searchOpen && searchResults.length">
+          <button class="search-result" *ngFor="let result of searchResults" type="button" [routerLink]="result.link" (click)="clearSearch()">
+            <span class="result-badge">{{ result.badge }}</span>
+            <strong>{{ result.label }}</strong>
+            <small>{{ result.detail }}</small>
+          </button>
+        </div>
+        <div class="search-results empty" *ngIf="searchOpen && searchQuery && !searchResults.length">
+          <strong>No matches</strong>
+          <small>Try a client name, appointment type, or material.</small>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="chip-button" type="button" (click)="toggleTheme()" [attr.aria-label]="darkMode ? 'Use light theme' : 'Use dark theme'">
+          <app-clinic-icon name="moon"></app-clinic-icon><span>{{ darkMode ? 'Light' : 'Dark' }}</span>
+        </button>
+        <app-language-switcher />
+        <button class="chip-button" type="button" (click)="logout()"><span>Log out</span></button>
+        <button class="notification-button" type="button" aria-label="Open notifications" (click)="toggleNotifications()">
+          <app-clinic-icon name="bell"></app-clinic-icon>
+          <i *ngIf="unreadNotifications">{{ unreadNotifications }}</i>
+        </button>
+        <div class="profile">
+          <span>{{ doctor.avatar }}</span>
+          <div><strong>{{ doctor.fullName }}</strong><small>{{ currentDateTime }}</small></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="doctor-stat-strip" aria-label="Live doctor indicators">
+        <article class="summary-card" *ngFor="let stat of stats">
+          <span>{{ stat.label }}</span>
+          <strong>{{ stat.value }}</strong>
+          <small>{{ stat.hint }}</small>
+        </article>
+      </section>
+
+      <router-outlet />
+    </main>
+  </div>
+
+  <aside class="notification-panel" [class.open]="notificationsOpen">
+    <div class="notification-panel-head">
+      <div>
+        <p class="eyebrow">Notification center</p>
+        <h2>Live clinic updates</h2>
+      </div>
+      <button class="icon-button" type="button" (click)="notificationsOpen = false" aria-label="Close notifications">
+        <app-clinic-icon name="close"></app-clinic-icon>
+      </button>
+    </div>
+    <div class="notification-error" *ngIf="actionError">{{ actionError }}</div>
+    <article class="notification-card staff-action-card" *ngFor="let action of staffActions"
+      [class.unread]="action.status === 'ACTIVE'" [class.undone]="action.status === 'UNDONE'">
+      <div class="notification-dot"></div>
+      <div class="staff-action-content">
+        <span class="action-kind">{{ actionLabel(action) }}</span>
+        <p>{{ action.description }}</p>
+        <small>{{ action.timestamp | date: 'medium' }}</small>
+        <div class="staff-action-footer">
+          <span *ngIf="action.status === 'UNDONE'">Undone{{ action.undoneBy ? ' by ' + action.undoneBy : '' }}{{ action.undoneAt ? ' on ' + (action.undoneAt | date: 'short') : '' }}</span>
+          <span *ngIf="action.status === 'ACTIVE' && !action.undoable">Recorded</span>
+          <button *ngIf="action.status === 'ACTIVE' && action.undoable" class="undo-button" type="button" (click)="undoAction(action)"
+            [disabled]="!!undoingActionId">
+            {{ undoingActionId === action.id ? 'Undoing...' : 'Undo' }}
+          </button>
+        </div>
+      </div>
+    </article>
+    <article class="notification-card" *ngFor="let notification of notifications" [class.unread]="!notification.read">
+      <div class="notification-dot"></div>
+      <div>
+        <a class="notification-link" [routerLink]="['/doctor/messages']"
+          [queryParams]="{ user: notification.userId }" (click)="notificationsOpen = false">{{ notification.title }}</a>
+        <p>{{ notification.message }}</p>
+        <small>{{ notification.time }}</small>
+      </div>
+    </article>
+    <div class="notification-empty" *ngIf="!staffActions.length && !notifications.length">
+      No notifications yet.
+    </div>
+  </aside>
+
+  <nav class="mobile-bottom-nav">
+    <app-secretary-nav-item *ngFor="let item of navItems.slice(0, 5)" [icon]="item.icon" [label]="item.label" [link]="item.link" (navigate)="navigate($event)" />
+  </nav>
+
+</div>

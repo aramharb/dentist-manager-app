@@ -1,0 +1,308 @@
+<section class="treatment-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Clinical workspace</p>
+      <h1>Treatment management</h1>
+      <p>Plan treatment, document tooth-level work, and follow clinical progress.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="secondary-button" *ngIf="selectedPatient" (click)="backToPatients()">Back to patients</button>
+      <button type="button" class="secondary-button" *ngIf="isDoctor" (click)="openCatalogEditor()">Manage catalog</button>
+      <span class="toast" *ngIf="toast">{{ toast }}</span>
+    </div>
+  </header>
+
+  <section class="catalog-panel" *ngIf="catalogEditorOpen && isDoctor">
+    <div class="section-title">
+      <div><span class="step">C</span><strong>{{ editingCatalog ? 'Edit catalog treatment' : 'Add catalog treatment' }}</strong></div>
+      <button type="button" class="icon-button" (click)="catalogEditorOpen = false" aria-label="Close catalog editor">x</button>
+    </div>
+    <form [formGroup]="catalogForm" (ngSubmit)="saveCatalogItem()" class="catalog-editor">
+      <div class="two-columns">
+        <label>Name<input formControlName="name" placeholder="Dental Cleaning" /></label>
+        <label>Code<input formControlName="code" placeholder="CLEANING" /></label>
+      </div>
+      <div class="two-columns">
+        <label>Category<input formControlName="category" /></label>
+        <label>Default price<input type="number" formControlName="defaultCost" min="0" step="0.01" /></label>
+      </div>
+      <div class="two-columns">
+        <label>Duration (minutes)<input type="number" formControlName="defaultDurationMinutes" min="1" /></label>
+        <label class="checkbox-label"><input type="checkbox" formControlName="active" /> Active in catalog</label>
+      </div>
+      <label>Description<textarea formControlName="description" rows="2"></textarea></label>
+      <div class="row-actions">
+        <button type="submit" class="primary-button">Save treatment</button>
+        <button type="button" class="secondary-button" (click)="catalogEditorOpen = false">Cancel</button>
+      </div>
+    </form>
+    <div class="catalog-admin-list">
+      <div class="list-heading"><strong>Current treatments</strong><span>{{ catalog.length }}</span></div>
+      <div class="catalog-admin-row" *ngFor="let item of catalog">
+        <div><strong>{{ item.name }}</strong><small>{{ item.defaultCost | currency }} · {{ item.category }}</small></div>
+        <span class="status">{{ item.active === false ? 'INACTIVE' : 'ACTIVE' }}</span>
+        <button type="button" class="secondary-button" (click)="openCatalogEditor(item)">Edit</button>
+        <button type="button" class="icon-button danger" *ngIf="item.active !== false" (click)="deleteCatalogItem(item)" title="Deactivate treatment">x</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="patient-picker">
+    <div class="picker-heading">
+      <span class="step">1</span>
+      <div><strong>Select a client</strong><small>{{ patients.length }} clients assigned to you</small></div>
+    </div>
+    <label class="patient-search">
+      <span>Search</span>
+      <input #patientSearch [value]="patientQuery" (input)="patientQuery = patientSearch.value" placeholder="Name, patient number, or phone" />
+    </label>
+
+    <div class="patient-table-state" *ngIf="patientsLoading">Loading clients...</div>
+    <div class="patient-table-state error" *ngIf="!patientsLoading && patientsError">{{ patientsError }}</div>
+
+    <div class="patient-table-wrap" *ngIf="!patientsLoading && !patientsError && patients.length">
+      <table class="patient-table">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Patient number</th>
+            <th>Phone</th>
+            <th>Treatment</th>
+            <th>Status</th>
+            <th>Progress</th>
+            <th><span class="visually-hidden">Open</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let patient of filteredPatients"
+            [class.active]="selectedPatient?.id === patient.id"
+            tabindex="0"
+            (click)="selectPatient(patient)"
+            (keydown.enter)="selectPatient(patient)"
+          >
+            <td>
+              <span class="patient-identity">
+                <span class="patient-avatar">{{ patient.firstName.charAt(0) }}{{ patient.lastName.charAt(0) }}</span>
+                <strong>{{ patient.firstName }} {{ patient.lastName }}</strong>
+              </span>
+            </td>
+            <td>{{ patient.patientNumber }}</td>
+            <td>{{ patient.phoneNumber || '-' }}</td>
+            <td>{{ patient.currentTreatment || 'No treatment' }}</td>
+            <td><span class="status" [attr.data-status]="patient.treatmentStatus">{{ patient.treatmentStatus || 'PLANNED' }}</span></td>
+            <td>{{ patient.progressPercent || 0 }}%</td>
+            <td><button type="button" class="secondary-button" (click)="$event.stopPropagation(); selectPatient(patient)">Open treatment</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="patient-table-state" *ngIf="!filteredPatients.length">No client matches your search.</div>
+    </div>
+
+    <div class="patient-table-state" *ngIf="!patientsLoading && !patientsError && !patients.length">
+      No clients are assigned to this doctor yet.
+    </div>
+
+    <div class="selected-patient" *ngIf="selectedPatient">
+      <span class="patient-avatar large">{{ selectedPatient.firstName.charAt(0) }}{{ selectedPatient.lastName.charAt(0) }}</span>
+      <div><strong>{{ selectedPatient.firstName }} {{ selectedPatient.lastName }}</strong><small>{{ selectedPatient.patientNumber }} - Last visit {{ selectedPatient.lastVisit || 'not recorded' }}</small></div>
+      <dl>
+        <div><dt>Registered treatment</dt><dd>{{ selectedPatient.currentTreatment || 'None' }}</dd></div>
+        <div><dt>Status</dt><dd>{{ selectedPatient.treatmentStatus || 'PLANNED' }}</dd></div>
+        <div><dt>Progress</dt><dd>{{ selectedPatient.progressPercent || 0 }}%</dd></div>
+        <div><dt>Paid</dt><dd>{{ selectedPatient.paidAmount | currency }}</dd></div>
+        <div><dt>Expected</dt><dd>{{ selectedPatient.expectedAmount | currency }}</dd></div>
+        <div><dt>Remaining</dt><dd>{{ selectedPatient.unpaidBalance | currency }}</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <div class="empty-workspace" *ngIf="!selectedPatient">
+    <strong>Choose a patient to open the clinical record</strong>
+    <p>Treatment plans, procedures, photos, and prescriptions will appear here.</p>
+  </div>
+
+  <div class="workspace" *ngIf="selectedPatient">
+    <aside class="plan-sidebar">
+      <div class="section-title">
+        <div><span class="step">2</span><strong>Treatment plans</strong></div>
+        <button type="button" class="secondary-button" (click)="startNewTreatment()">New plan</button>
+      </div>
+
+      <form [formGroup]="treatmentForm" (ngSubmit)="saveAllData()" class="plan-form">
+        <div class="form-heading">
+          <strong>{{ planMode === 'edit' ? 'Edit selected plan' : 'Create treatment plan' }}</strong>
+          <small *ngIf="planMode === 'create'">This patient can have multiple plans.</small>
+        </div>
+        <button type="submit" class="primary-button save-all-button" [disabled]="savingPlan">{{ savingPlan ? 'Saving complete form...' : 'Save all treatment data' }}</button>
+        <div class="progress-preview">
+          <span>Calculated progress</span>
+          <strong>{{ calculatedProgress }}%</strong>
+          <small>{{ completedProcedureCount }} completed / {{ totalProcedureCount }} procedures</small>
+          <progress max="100" [value]="calculatedProgress"></progress>
+        </div>
+        <label>Clinical description<input formControlName="objective" placeholder="Describe the treatment" /></label>
+        <div class="two-columns">
+          <label>Status<select formControlName="status"><option>PLANNED</option><option>IN_PROGRESS</option><option>COMPLETED</option><option>ON_HOLD</option><option>CANCELLED</option></select></label>
+          <label>Priority<select formControlName="priority"><option>LOW</option><option>NORMAL</option><option>HIGH</option><option>URGENT</option></select></label>
+        </div>
+        <div class="two-columns">
+          <label>Expected bill<input type="number" formControlName="estimatedBill" min="0" step="0.01" /></label>
+          <label>Paid amount<input type="number" formControlName="paidAmount" min="0" [max]="treatmentForm.controls.estimatedBill.value" step="0.01" /></label>
+        </div>
+        <div class="bill-preview"><span>Remaining</span><strong>{{ planRemaining | currency }}</strong></div>
+        <label>Estimated minutes<input type="number" formControlName="estimatedDurationMinutes" min="0" /></label>
+        <label>Doctor notes<textarea formControlName="doctorNotes" rows="3"></textarea></label>
+        <button type="submit" class="primary-button" [disabled]="savingPlan">{{ savingPlan ? 'Saving...' : 'Save all treatment data' }}</button>
+      </form>
+
+      <div class="plan-list">
+        <button type="button" *ngFor="let treatment of treatments" class="treatment-card" [class.active]="treatment.id === selectedTreatment?.id" (click)="openTreatment(treatment)">
+          <span class="card-top"><span class="status" [attr.data-status]="treatment.status">{{ treatment.status }}</span><small>{{ treatment.priority }}</small></span>
+          <strong>{{ treatment.objective }}</strong>
+          <small>{{ treatment.procedureCount }} procedures - {{ treatment.hasWholeMouthProcedure ? 'whole mouth' : ((treatment.assignedTeeth.join(', ')) || 'no teeth assigned') }}</small>
+          <progress max="100" [value]="treatment.progressPercent"></progress>
+          <span class="money-row"><b>{{ treatment.estimatedBill | currency }}</b><span>{{ treatment.remainingBalance | currency }} remaining</span></span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="clinical-record" *ngIf="selectedTreatment || planMode === 'create'; else newPlanPrompt">
+      <header class="plan-summary" *ngIf="selectedTreatment">
+        <div><p class="eyebrow">Active plan</p><h2>{{ selectedTreatment.objective }}</h2><p>{{ selectedTreatment.doctorNotes || 'No doctor notes yet.' }}</p></div>
+        <dl>
+          <div><dt>Status</dt><dd>{{ selectedTreatment.status }}</dd></div>
+          <div><dt>Priority</dt><dd>{{ selectedTreatment.priority }}</dd></div>
+          <div><dt>Progress</dt><dd>{{ calculatedProgress }}%</dd></div>
+          <div><dt>Planned treatment cost</dt><dd>{{ plannedProcedureCost | currency }}</dd></div>
+          <div><dt>Completed value</dt><dd>{{ completedProcedureValue | currency }}</dd></div>
+          <div><dt>Remaining treatment value</dt><dd>{{ remainingProcedureValue | currency }}</dd></div>
+        </dl>
+      </header>
+
+      <section class="clinical-section tooth-section">
+        <div class="section-heading"><div><span class="step">3</span><div><h3>Teeth and procedures</h3><p>Select teeth, add a label description, then save them into the form.</p></div></div></div>
+        <app-tooth-selector
+          [(selectedTeeth)]="selectedTeeth"
+          [(allTeeth)]="allTeeth"
+          (selectedTeethChange)="syncToothDescriptionFields()"
+          (allTeethChange)="syncToothDescriptionFields()"
+          [procedures]="procedures">
+        </app-tooth-selector>
+        <p class="selection-summary">Selected tooth: <strong>{{ allTeeth ? 'All teeth' : (selectedTeeth.join(', ') || 'Select a tooth on the chart') }}</strong></p>
+
+        <div class="procedure-workspace">
+          <div class="procedure-form" *ngIf="!procedureEditorOpen">
+            <div class="form-heading"><strong>{{ procedureScopeValid ? 'Tooth selected' : 'Select a tooth to continue' }}</strong><small>Choose a tooth on the dental chart, then add a predefined or custom treatment.</small></div>
+            <div class="selected-tooth-callout" *ngIf="procedureScopeValid">Tooth {{ allTeeth ? 'all' : selectedTeeth.join(', ') }} selected</div>
+            <button type="button" class="primary-button" [disabled]="!procedureScopeValid" (click)="openProcedureEditor()">+ Add procedure</button>
+          </div>
+          <form [formGroup]="procedureForm" (ngSubmit)="saveSelectedTeeth()" class="procedure-form" *ngIf="procedureEditorOpen">
+            <div class="form-heading"><strong>Selected teeth form</strong><small>Saved selections are written to the database by the main save button.</small></div>
+            <label>Search catalog<input formControlName="catalogQuery" placeholder="Search" (input)="searchCatalog()" /></label>
+            <div class="catalog-list">
+              <button type="button" *ngFor="let item of catalog" (click)="selectCatalog(item)"><span>{{ item.name }}</span><small>{{ item.defaultCost | currency }} - {{ item.defaultDurationMinutes }} min</small></button>
+            </div>
+            <label>Procedure name<input formControlName="name" placeholder="Custom procedure name" /></label>
+            <div class="two-columns">
+              <label>Status<select formControlName="status"><option>PLANNED</option><option>IN_PROGRESS</option><option>COMPLETED</option><option>CANCELLED</option></select></label>
+              <label>Cost<input type="number" formControlName="cost" min="0" step="0.01" /></label>
+            </div>
+            <div class="two-columns">
+              <label>Practitioner<input formControlName="practitioner" /></label>
+              <label>Duration<input type="number" formControlName="durationMinutes" min="1" /></label>
+            </div>
+            <label>Notes<textarea formControlName="notes" rows="2"></textarea></label>
+            <div [formGroup]="toothDescriptionForm" class="tooth-description-editor">
+              <label *ngIf="allTeeth">All teeth description<textarea formControlName="allTeethDescription" rows="2" placeholder="Describe the full-mouth work"></textarea></label>
+              <div formArrayName="descriptions" class="tooth-description-list" *ngIf="!allTeeth && toothDescriptions.length">
+                <label *ngFor="let control of toothDescriptions.controls; let i = index" [formGroupName]="i">
+                  <span>{{ control.get('toothNumber')?.value }} - {{ toothLabel(control.get('toothNumber')?.value) }}</span>
+                  <textarea formControlName="description" rows="2" placeholder="Tooth description"></textarea>
+                </label>
+              </div>
+            </div>
+            <div class="row-actions">
+              <button type="submit" class="primary-button" [disabled]="!procedureScopeValid">Add procedure</button>
+              <button type="button" class="secondary-button" (click)="procedureEditorOpen = false">Cancel</button>
+            </div>
+          </form>
+
+          <div class="procedure-list">
+            <div class="list-heading"><strong>Saved in this form</strong><span>{{ pendingProcedures.length }}</span></div>
+            <div class="procedure-row pending" *ngFor="let item of pendingProcedures; let i = index">
+              <span class="tooth-chip">{{ item.payload.allTeeth ? 'ALL' : (item.payload.toothNumber || '-') }}</span>
+              <div><strong>{{ item.payload.name }}</strong><small>{{ item.label }} - {{ item.payload.toothDescription || 'No tooth description' }}</small></div>
+              <span class="status">{{ item.payload.status }}</span>
+              <button type="button" class="icon-button danger" title="Remove saved selection" (click)="removePendingProcedure(i)">x</button>
+            </div>
+            <p class="empty-copy" *ngIf="!pendingProcedures.length">No selected teeth are waiting to be saved.</p>
+
+            <div class="list-heading stored"><strong>Tracked procedures</strong><span>{{ procedures.length }}</span></div>
+            <div class="procedure-row" *ngFor="let procedure of procedures">
+              <span class="tooth-chip">{{ procedure.allTeeth ? 'ALL' : (procedure.toothNumber || '-') }}</span>
+              <div><strong>{{ procedure.name }}</strong><small>{{ procedure.practitioner || 'Unassigned' }} - {{ procedure.cost | currency }} - {{ procedure.durationMinutes }} min</small><small>{{ procedure.toothDescription || 'No tooth description' }}</small></div>
+              <select [value]="procedure.status" (change)="updateProcedureStatus(procedure, $event)" aria-label="Procedure status"><option>PLANNED</option><option>IN_PROGRESS</option><option>COMPLETED</option><option>CANCELLED</option></select>
+              <button type="button" class="icon-button danger" title="Delete procedure" (click)="deleteProcedure(procedure)">x</button>
+            </div>
+            <p class="empty-copy" *ngIf="!procedures.length">No procedures have been saved to the database yet.</p>
+            <div class="cost-summary">
+              <div><span>Planned</span><strong>{{ plannedProcedureCost | currency }}</strong></div>
+              <div><span>Completed</span><strong>{{ completedProcedureValue | currency }}</strong></div>
+              <div><span>Remaining</span><strong>{{ remainingProcedureValue | currency }}</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="clinical-section documentation-section">
+        <div class="section-heading"><div><span class="step">4</span><div><h3>Clinical documentation</h3><p>Before and after records, visit history, and prescriptions are saved per treatment.</p></div></div></div>
+        <div class="documentation-grid">
+          <article class="document-panel photos-panel">
+            <h4>Before and after photos</h4>
+            <form [formGroup]="photoForm" (ngSubmit)="addPhoto()" class="stack-form">
+              <div class="two-columns"><label>Stage<select formControlName="photoType"><option>BEFORE</option><option>AFTER</option><option>XRAY</option><option>SCAN</option><option>OTHER</option></select></label><label>File name<input formControlName="fileName" placeholder="photo.jpg" /></label></div>
+              <label>Image URL<input formControlName="url" placeholder="https://..." /></label>
+              <label>Description<input formControlName="description" placeholder="Clinical view and notes" /></label>
+              <button type="submit" class="secondary-button" [disabled]="!selectedTreatment">Save photo</button>
+            </form>
+            <div class="comparison-grid">
+              <div><strong>Before</strong><figure *ngFor="let photo of photosOfType('BEFORE')"><img [src]="photoSrc(photo)" [alt]="photo.fileName" (error)="markPhotoBroken($event)" /><figcaption>{{ photo.description || photo.fileName }}</figcaption></figure><small *ngIf="!photosOfType('BEFORE').length">No before photo</small></div>
+              <div><strong>After</strong><figure *ngFor="let photo of photosOfType('AFTER')"><img [src]="photoSrc(photo)" [alt]="photo.fileName" (error)="markPhotoBroken($event)" /><figcaption>{{ photo.description || photo.fileName }}</figcaption></figure><small *ngIf="!photosOfType('AFTER').length">No after photo</small></div>
+            </div>
+            <div class="other-photo-grid" *ngIf="otherPhotos().length">
+              <figure *ngFor="let photo of otherPhotos()"><img [src]="photoSrc(photo)" [alt]="photo.fileName" (error)="markPhotoBroken($event)" /><figcaption>{{ photo.photoType }} - {{ photo.description || photo.fileName }}</figcaption></figure>
+            </div>
+          </article>
+
+          <article class="document-panel">
+            <h4>Prescription</h4>
+            <form [formGroup]="medicineForm" (ngSubmit)="addMedicine()" class="stack-form">
+              <label>Medicine<input formControlName="medicineName" /></label><label>Dosage<input formControlName="dosage" /></label>
+              <label>Duration<input formControlName="duration" /></label><label>Instructions<textarea formControlName="instructions" rows="3"></textarea></label>
+              <button type="submit" class="secondary-button">Add medicine to form</button>
+            </form>
+            <div class="prescription-row pending" *ngFor="let medicine of medicines.controls; let i = index">
+              <div><strong>{{ medicine.controls.medicineName.value }}</strong><small>{{ medicine.controls.dosage.value }} - {{ medicine.controls.duration.value }}</small></div>
+              <div class="row-actions">
+                <button type="button" class="icon-button" title="Print prescription" (click)="exportMedicine(i)">open</button>
+                <button type="button" class="icon-button danger" title="Remove medicine" (click)="removeMedicine(i)">x</button>
+              </div>
+            </div>
+            <div class="list-heading stored"><strong>Saved medicines</strong><span>{{ prescriptions.length }}</span></div>
+            <div class="prescription-row" *ngFor="let prescription of prescriptions"><div><strong>{{ prescription.medicineName }}</strong><small>{{ prescription.dosage }} - {{ prescription.duration }}</small></div><button type="button" class="icon-button" title="Print prescription" (click)="exportPrescription(prescription)">open</button></div>
+            <p class="empty-copy" *ngIf="!prescriptions.length">No medicines saved for this treatment yet.</p>
+          </article>
+
+          <article class="document-panel">
+            <h4>Visit timeline</h4>
+            <form [formGroup]="historyForm" (ngSubmit)="addHistory()" class="stack-form"><label>Visit title<input formControlName="title" /></label><label>Clinical note<textarea formControlName="description" rows="3"></textarea></label><button type="submit" class="secondary-button" [disabled]="!selectedTreatment">Add visit note</button></form>
+            <ol class="timeline"><li *ngFor="let item of timeline"><span></span><div><strong>{{ item.title }}</strong><small>{{ item.eventType }} - {{ item.eventAt | date:'medium' }}</small><p>{{ item.description }}</p></div></li></ol>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <ng-template #newPlanPrompt><main class="new-plan-prompt"><strong>Complete the new treatment plan</strong><p>Add its description, status, priority, progress, and proposed bill from the form.</p></main></ng-template>
+  </div>
+</section>

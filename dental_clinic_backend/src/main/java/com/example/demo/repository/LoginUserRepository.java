@@ -1,0 +1,26 @@
+package com.example.demo.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
+
+import com.example.demo.entity.LoginUser;
+
+public interface LoginUserRepository extends JpaRepository<LoginUser, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from LoginUser u where u.id = :id")
+    Optional<LoginUser> lockMessagingUser(@Param("id") Long id);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from LoginUser u where u.id = :id")
+    Optional<LoginUser> findByIdForUpdate(@Param("id") Long id);
+    Optional<LoginUser> findByUsernameIgnoreCaseAndActiveTrue(String username);
+    List<LoginUser> findByActiveTrueOrderByRoleAscFullNameAsc();
+    List<LoginUser> findByRoleIgnoreCaseAndActiveTrue(String role);
+    Optional<LoginUser> findFirstByFullNameIgnoreCaseAndRoleIgnoreCaseAndActiveTrue(String fullName, String role);
+    Optional<LoginUser> findFirstByUsernameIgnoreCaseAndRoleIgnoreCaseAndActiveTrue(String username, String role);
+}

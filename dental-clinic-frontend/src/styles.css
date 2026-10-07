@@ -1,0 +1,162 @@
+﻿:root {
+  color-scheme: light;
+  --bg: #f4f8fc;
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-solid: #ffffff;
+  --text: #103149;
+  --muted: #5f7284;
+  --primary: #1689e8;
+  --primary-dark: #0f67c0;
+  --cyan: #06b6d4;
+  --mint: #19b985;
+  --amber: #f59e0b;
+  --danger: #ef4444;
+  --line: #dce9f3;
+  --shadow: 0 22px 54px rgba(24, 83, 120, 0.12);
+  --radius: 18px;
+  --space: 20px;
+  font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(6, 182, 212, 0.18), transparent 22rem),
+    radial-gradient(circle at 82% 0%, rgba(22, 137, 232, 0.12), transparent 18rem),
+    linear-gradient(180deg, #f8fbff 0%, #eef6fb 52%, #f8fbff 100%);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(17, 48, 73, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(17, 48, 73, 0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.25), transparent 75%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(6, 182, 212, 0.2);
+}
+
+*:focus-visible {
+  outline: 3px solid rgba(6, 182, 212, 0.32);
+  outline-offset: 2px;
+}
+
+html[dir='rtl'] body {
+  direction: rtl;
+  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+html[dir='rtl'] .sidebar {
+  inset: 18px 18px 18px auto;
+}
+
+html[dir='rtl'] .workspace {
+  margin-right: 324px;
+  margin-left: 0;
+}
+
+html[dir='rtl'] .topbar-actions {
+  justify-content: start;
+}
+
+html[dir='rtl'] .search-result,
+html[dir='rtl'] input,
+html[dir='rtl'] textarea,
+html[dir='rtl'] select {
+  text-align: right;
+}
+
+html[dir='rtl'] .notification-button i {
+  right: auto;
+  left: -4px;
+}
+
+html[dir='rtl'] .notification-panel {
+  right: auto;
+  left: 18px;
+  transform: translateX(-110%);
+}
+
+html[dir='rtl'] .notification-panel.open {
+  transform: translateX(0);
+}
+
+html[dir='rtl'] .toast {
+  right: auto;
+  left: 24px;
+}
+
+html[dir='rtl'] .timeline li > div {
+  padding-right: 10px;
+  padding-left: 0;
+  border-right: 1px solid #dbe7ec;
+  border-left: 0;
+}
+
+html[dir='rtl'] .form-grid label.required::before {
+  margin-right: 0;
+  margin-left: 4px;
+}
+
+html[dir='rtl'] .timeline-appointment {
+  border-right: 4px solid var(--accent);
+  border-left-width: 1px;
+}
+
+@media (max-width: 1220px) {
+  html[dir='rtl'] .sidebar {
+    inset: 18px 14px 18px auto;
+  }
+
+  html[dir='rtl'] .workspace {
+    margin-right: 304px;
+  }
+}
+
+@media (max-width: 900px) {
+  html[dir='rtl'] .sidebar {
+    transform: translateX(110%);
+  }
+
+  html[dir='rtl'] .sidebar.open {
+    transform: translateX(0);
+  }
+
+  html[dir='rtl'] .workspace {
+    margin-right: 0;
+  }
+
+  html[dir='rtl'] .notification-panel {
+    right: auto;
+    left: 12px;
+  }
+}

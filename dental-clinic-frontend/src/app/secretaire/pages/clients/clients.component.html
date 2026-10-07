@@ -1,0 +1,346 @@
+<section class="page fade-in">
+  <nav class="breadcrumb" aria-label="Breadcrumb">DentaCare Pro / Patients / Registry</nav>
+  <div class="page-title">
+    <div>
+      <p class="eyebrow">Clients</p>
+      <h1>Patient management</h1>
+      <p class="page-subtitle">
+        A complete registry connected to the clinic patient table, including identity, CNAM coverage,
+        treatment, visits, balances, and notes.
+      </p>
+    </div>
+    <button class="primary-button" type="button" (click)="openForm()">+ Add Client</button>
+  </div>
+
+  <div class="toolbar">
+    <input
+      class="search-input"
+      [(ngModel)]="query"
+      placeholder="Search name, patient number, phone, email..."
+    />
+    <select [(ngModel)]="cnamFilter" aria-label="CNAM filter">
+      <option value="">All patients</option>
+      <option value="true">CNAM covered</option>
+      <option value="false">Private patients</option>
+    </select>
+    <select [(ngModel)]="sortBy" aria-label="Sort patients">
+      <option value="name">Sort by name</option>
+      <option value="lastVisit">Last visit</option>
+      <option value="nextAppointment">Next appointment</option>
+      <option value="balance">Unpaid balance</option>
+    </select>
+    <button class="ghost-button" type="button" (click)="loadPatients()" [disabled]="loading">
+      Refresh
+    </button>
+  </div>
+
+  <div class="notice error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="notice" *ngIf="loading">Loading patient records...</div>
+
+  <div class="table-card patient-table" *ngIf="!loading && filteredPatients.length">
+    <div class="table-head">
+      <span>Number</span>
+      <span>Patient</span>
+      <span>Phone</span>
+      <span>Last visit</span>
+      <span>Next appointment</span>
+      <span>Balance</span>
+    </div>
+    <button class="table-row" *ngFor="let patient of filteredPatients" (click)="openDetails(patient)">
+      <span>{{ patient.patientNumber }}</span>
+      <span>
+        <b>{{ patient.firstName }} {{ patient.lastName }}</b>
+        <small>{{ patient.email || 'No email saved' }}</small>
+      </span>
+      <span>{{ patient.phoneNumber }}</span>
+      <span>{{ patient.lastVisit || 'Not visited yet' }}</span>
+      <span>{{ patient.nextAppointment ? (patient.nextAppointment | date: 'medium') : 'Not scheduled' }}</span>
+      <span [class.balance-due]="patient.unpaidBalance > 0">{{ patient.unpaidBalance | currency }}</span>
+    </button>
+  </div>
+
+  <div class="empty-state" *ngIf="!loading && !filteredPatients.length">
+    <strong>No matching patients</strong>
+    <p>Adjust the filters or add the first patient record for the clinic.</p>
+    <button class="primary-button" type="button" (click)="openForm()">+ Add Client</button>
+  </div>
+
+  <div class="client-grid" *ngIf="!loading && filteredPatients.length">
+    <article class="client-card" *ngFor="let patient of filteredPatients" (click)="openDetails(patient)">
+      <div class="avatar">{{ patient.firstName.charAt(0) }}{{ patient.lastName.charAt(0) }}</div>
+      <div>
+        <h3>{{ patient.firstName }} {{ patient.lastName }}</h3>
+        <p>{{ patient.patientNumber }} - {{ patient.phoneNumber }}</p>
+      </div>
+      <span class="status-pill">{{ patient.cnamCovered ? 'CNAM' : 'Private' }}</span>
+      <dl>
+        <div>
+          <dt>Blood</dt>
+          <dd>{{ patient.bloodType || 'N/A' }}</dd>
+        </div>
+        <div>
+          <dt>Balance</dt>
+          <dd [class.balance-due]="patient.unpaidBalance > 0">{{ patient.unpaidBalance | currency }}</dd>
+        </div>
+        <div>
+          <dt>Last</dt>
+          <dd>{{ patient.lastVisit || 'N/A' }}</dd>
+        </div>
+        <div>
+          <dt>Next</dt>
+          <dd>{{ patient.nextAppointment ? (patient.nextAppointment | date: 'short') : 'N/A' }}</dd>
+        </div>
+      </dl>
+      <div class="card-treatment">
+        <div>
+          <span class="treatment-label">{{ patient.currentTreatment || 'No treatment plan' }}</span>
+          <span class="treatment-meta">{{ patient.treatmentStatus || 'PLANNED' }} · {{ patient.treatmentPriority || 'NORMAL' }}</span>
+        </div>
+        <strong>{{ patient.treatmentProgressPercent || 0 }}%</strong>
+        <progress max="100" [value]="patient.treatmentProgressPercent || 0"></progress>
+        <span>{{ patient.expectedAmount | currency }} expected - {{ patient.paidAmount | currency }} paid - {{ patient.unpaidBalance | currency }} remaining</span>
+      </div>
+    </article>
+  </div>
+</section>
+
+<app-modal [open]="detailsOpen" title="Client profile" eyebrow="Details" (close)="detailsOpen = false">
+  <div class="profile-modal" *ngIf="selectedPatient">
+    <div class="avatar large">
+      {{ selectedPatient.firstName.charAt(0) }}{{ selectedPatient.lastName.charAt(0) }}
+    </div>
+    <h2>{{ selectedPatient.firstName }} {{ selectedPatient.lastName }}</h2>
+    <p>{{ selectedPatient.currentTreatment || 'No current treatment recorded.' }}</p>
+    <div class="profile-stats">
+      <span>
+        <b>{{ selectedPatient.patientNumber }}</b>
+        <small>Patient number</small>
+      </span>
+      <span>
+        <b>{{ selectedPatient.cnamCovered ? 'Covered' : 'Private' }}</b>
+        <small>CNAM status</small>
+      </span>
+      <span>
+        <b>{{ selectedPatient.unpaidBalance | currency }}</b>
+        <small>Unpaid balance</small>
+      </span>
+    </div>
+    <div class="detail-list">
+      <span>Gender: {{ selectedPatient.gender || 'N/A' }}</span>
+      <span>Birth date: {{ selectedPatient.birthDate || 'N/A' }}</span>
+      <span>Phone: {{ selectedPatient.phoneNumber }}</span>
+      <span>Email: {{ selectedPatient.email || 'N/A' }}</span>
+      <span>Address: {{ selectedPatient.address || 'N/A' }}</span>
+      <span>Blood: {{ selectedPatient.bloodType || 'N/A' }}</span>
+      <span >Allergies: {{ selectedPatient.allergies || 'None recorded' }}</span>
+      <span>CNAM number: {{ selectedPatient.cnamNumber || 'N/A' }}</span>
+      <span>First visit: {{ selectedPatient.firstVisit || 'N/A' }}</span>
+      <span>Last visit: {{ selectedPatient.lastVisit || 'N/A' }}</span>
+      <span>Expected amount: {{ selectedPatient.expectedAmount | currency }}</span>
+      <span>Paid amount: {{ selectedPatient.paidAmount | currency }}</span>
+      <span>Treatment status: {{ selectedPatient.treatmentStatus || 'PLANNED' }}</span>
+      <span>Treatment priority: {{ selectedPatient.treatmentPriority || 'NORMAL' }}</span>
+      <span>Treatment progress: {{ selectedPatient.treatmentProgressPercent || 0 }}%</span>
+      <span>Next appointment: {{ selectedPatient.nextAppointment ? (selectedPatient.nextAppointment | date: 'medium') : 'N/A' }}</span>
+      <span>Last modified: {{ selectedPatient.lastModified ? (selectedPatient.lastModified | date: 'medium') : 'N/A' }}</span>
+      <span class="wide">Notes: {{ selectedPatient.notes || 'No notes saved.' }}</span>
+    </div>
+    <div class="notice error" *ngIf="canDeletePatients && remainingBalance(selectedPatient) > 0">
+      This patient cannot be deleted until the remaining balance is fully paid.
+    </div>
+    <div class="profile-actions">
+      <button *ngIf="canDeletePatients" class="danger-button" type="button" (click)="deletePatient(selectedPatient)"
+        [disabled]="deleting || remainingBalance(selectedPatient) > 0">
+        {{ deleting ? 'Deleting...' : 'Delete Client' }}
+      </button>
+      <button class="primary-button" type="button" (click)="detailsOpen = false; openForm(selectedPatient)">
+        Edit Client
+      </button>
+    </div>
+  </div>
+</app-modal>
+
+<app-modal
+  [open]="formOpen"
+  [title]="editingPatient ? 'Edit client' : 'Add client'"
+  eyebrow="Patient form"
+  (close)="formOpen = false"
+>
+  <form class="form-grid" #patientForm="ngForm" (ngSubmit)="savePatient(patientForm)">
+    <div class="notice error" *ngIf="formError">{{ formError }}</div>
+
+    <h3>Identity</h3>
+
+    <label class="required">
+      Gender
+      <select name="gender" [(ngModel)]="formModel.gender" required>
+        <option value="">Select gender</option>
+        <option>Female</option>
+        <option>Male</option>
+      </select>
+    </label>
+    <label class="required">
+      First name
+      <input name="firstName" [(ngModel)]="formModel.firstName" maxlength="100" required />
+      <small *ngIf="patientForm.submitted && patientForm.controls['firstName']?.invalid">First name is required.</small>
+    </label>
+    <label class="required">
+      Last name
+      <input name="lastName" [(ngModel)]="formModel.lastName" maxlength="100" required />
+      <small *ngIf="patientForm.submitted && patientForm.controls['lastName']?.invalid">Last name is required.</small>
+    </label>
+    <label>
+      Birth date
+      <input type="date" name="birthDate" [(ngModel)]="formModel.birthDate" />
+    </label>
+    <label class="required">
+      Phone
+      <input name="phoneNumber" [(ngModel)]="formModel.phoneNumber" maxlength="20" required />
+      <small *ngIf="patientForm.submitted && patientForm.controls['phoneNumber']?.invalid">Phone number is required.</small>
+    </label>
+    <label>
+      Email
+      <input type="email" name="email" [(ngModel)]="formModel.email" maxlength="150" />
+    </label>
+    <label class="full-field">
+      Address
+      <input name="address" optional [(ngModel)]="formModel.address" />
+    </label>
+    <label class="full-field required" *ngIf="!isDoctor">
+      Assigned doctor
+      <select
+        name="assignedDoctorUserId"
+        [(ngModel)]="formModel.assignedDoctorUserId"
+        [disabled]="doctorsLoading"
+        required
+      >
+        <option [ngValue]="null">
+          {{ doctorsLoading ? 'Loading doctors...' : 'Select an assigned doctor' }}
+        </option>
+        <option *ngFor="let doctor of doctors" [ngValue]="doctor.id">
+          {{ doctor.fullName }}
+        </option>
+      </select>
+      <small *ngIf="patientForm.submitted && patientForm.controls['assignedDoctorUserId']?.invalid">
+        Assigned doctor is required.
+      </small>
+      <small *ngIf="doctorsError">{{ doctorsError }}</small>
+    </label>
+
+    <h3>Medical</h3>
+    <label>
+      Blood type
+      <select name="bloodType" [(ngModel)]="formModel.bloodType">
+        <option value="">Not specified</option>
+        <option *ngFor="let bloodType of ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']">{{ bloodType }}</option>
+      </select>
+    </label>
+    <label class="toggle-field">
+      <span>CNAM covered</span>
+      <input type="checkbox" name="cnamCovered" [(ngModel)]="formModel.cnamCovered" />
+      <i></i>
+    </label>
+    <label>
+      CNAM number
+      <input name="cnamNumber" [(ngModel)]="formModel.cnamNumber" maxlength="30" [disabled]="!formModel.cnamCovered" />
+    </label>
+ 
+    <label class="full-field">
+      Allergies
+      <textarea rows="3" name="allergies" optional [(ngModel)]="formModel.allergies"></textarea>
+    </label>
+    <h3>Treatment and payment</h3>
+    <div class="notice error full-field" *ngIf="catalogError">{{ catalogError }}</div>
+    <label class="full-field" [class.required]="isDoctor">
+      Treatment
+      <select
+        name="treatmentSelection"
+        [(ngModel)]="treatmentSelection"
+        (ngModelChange)="onTreatmentChange()"
+        [disabled]="catalogLoading"
+        [required]="isDoctor"
+      >
+        <option value="">{{ catalogLoading ? 'Loading treatments...' : 'Select a treatment' }}</option>
+        <option *ngFor="let treatment of treatmentCatalog" [ngValue]="treatment.id">
+          {{ treatment.name }} - {{ treatment.defaultCost | currency }}
+        </option>
+        <option value="other">Other</option>
+      </select>
+    </label>
+    <label class="full-field" [class.required]="isDoctor" *ngIf="treatmentSelection === 'other'">
+      Other treatment
+      <input
+        name="currentTreatment"
+        [(ngModel)]="formModel.currentTreatment"
+        maxlength="220"
+        [required]="isDoctor"
+      />
+    </label>
+    <label [class.required]="isDoctor">
+      Expected amount
+      <input
+        type="number"
+        name="expectedAmount"
+        [(ngModel)]="formModel.expectedAmount"
+        min="0"
+        step="0.01"
+        [readonly]="treatmentSelection !== 'other'"
+        [required]="isDoctor"
+      />
+    </label>
+    <label [class.required]="isDoctor">
+      Paid amount
+      <input
+        type="number"
+        name="paidAmount"
+        [(ngModel)]="formModel.paidAmount"
+        min="0"
+        [max]="formModel.expectedAmount"
+        step="0.01"
+        [required]="isDoctor"
+      />
+    </label>
+    <div class="remaining-field full-field">
+      <span>Remaining amount</span>
+      <strong>{{ remainingAmount | currency }}</strong>
+    </div>
+
+    <h3>Visits</h3>
+    <div class="last-visit-field full-field">
+      <span>Last visit</span>
+      <strong>{{ editingPatient?.lastVisit || 'Will be recorded when saved' }}</strong>
+    </div>
+    <div class="appointment-summary-field full-field">
+      <div>
+        <span>Next appointment</span>
+        <strong *ngIf="editingPatient?.nextAppointment; else noNextAppointment">
+          {{ editingPatient?.nextAppointment | date: 'mediumDate' }}
+        </strong>
+        <ng-template #noNextAppointment>
+          <strong>No next appointment is set for this client.</strong>
+        </ng-template>
+      </div>
+      <button
+        *ngIf="!isDoctor"
+        type="button"
+        class="primary-button"
+        (click)="editingPatient ? scheduleNextAppointment() : savePatient(patientForm, true)"
+        [disabled]="saving"
+      >
+        {{ editingPatient
+          ? 'Open Rendez-vous for ' + editingPatient.firstName + ' ' + editingPatient.lastName
+          : 'Save client and schedule appointment' }}
+      </button>
+    </div>
+    <label class="full-field">
+      General notes
+      <textarea rows="3" name="notes" [(ngModel)]="formModel.notes"></textarea>
+    </label>
+    <div class="form-actions">
+      <button type="button" class="ghost-button" (click)="formOpen = false" [disabled]="saving">Cancel</button>
+      <button type="submit" class="primary-button" [disabled]="saving">
+        {{ saving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </form>
+</app-modal>

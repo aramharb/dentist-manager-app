@@ -1,0 +1,26 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+coverage/
+
+# Java / Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# IDEs and local tooling
+.idea/
+*.iml
+.kilo/
+
+# OS files
+.DS_Store
+Thumbs.db

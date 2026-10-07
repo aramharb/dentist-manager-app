@@ -1,0 +1,340 @@
+<section class="page fade-in">
+  <nav class="breadcrumb" aria-label="Breadcrumb">DentaCare Pro / Calendar / Appointments</nav>
+  <div class="page-title">
+    <div>
+      <p class="eyebrow">Rendez-vous</p>
+      <h1>Calendar and appointments</h1>
+      <p class="page-subtitle">
+        {{ isDoctor
+          ? 'My calendar, my saved availability, and my appointments.'
+          : 'Choose a date, compare every doctor\'s saved availability, then open one timetable.' }}
+      </p>
+    </div>
+    <button class="primary-button" type="button" (click)="openAppointmentModal()"
+      [disabled]="!canCreateOnSelectedDate">
+      Add appointment
+    </button>
+  </div>
+
+  <div class="notice error" *ngIf="error">{{ error }}</div>
+  <div class="notice success" *ngIf="success">{{ success }}</div>
+  <div class="notice" *ngIf="loading">Loading appointments and availability from the database...</div>
+  <div class="notice" *ngIf="requestedPatientId">
+    Scheduling an appointment for <strong>{{ requestedPatientDisplayName || 'the selected client' }}</strong>.
+    Choose a date and doctor, then select an available time.
+  </div>
+
+  <div class="appointments-layout">
+    <article class="panel calendar-panel">
+      <div class="section-heading">
+        <div>
+          <h2>Choose a date</h2>
+          <span>Availability and booking levels update from saved schedules</span>
+        </div>
+        <div class="segmented">
+          <button type="button" (click)="changeMonth(-1)">Previous</button>
+          <strong>{{ monthLabel }}</strong>
+          <button type="button" (click)="changeMonth(1)">Next</button>
+        </div>
+      </div>
+
+      <div class="calendar-week"><span *ngFor="let day of weekDays">{{ day }}</span></div>
+      <div class="calendar-grid">
+        <button type="button" *ngFor="let day of calendarDays"
+          [class.muted]="day.otherMonth" [class.today]="day.iso === today"
+          [class.selected]="day.iso === selectedDate" [class.past]="day.past"
+          [class.state-available]="day.state === 'available'"
+          [class.state-unavailable]="day.state === 'unavailable'"
+          [class.state-partial]="day.state === 'partial'"
+          [class.state-full]="day.state === 'full'"
+          (click)="selectDate(day.iso)"
+          [attr.aria-label]="day.iso + ', ' + calendarStateLabel(day.state) + ', ' + day.appointmentCount + ' appointments'">
+          <span class="day-number">{{ day.date.getDate() }}</span>
+          <span class="day-bookings" *ngIf="day.appointmentCount">{{ day.appointmentCount }} appointment{{ day.appointmentCount === 1 ? '' : 's' }}</span>
+          <span class="doctor-indicators" *ngIf="!isDoctor" aria-hidden="true">
+            <i *ngFor="let doctor of day.doctorIndicators" [class.working]="doctor.working"
+              [class.booked]="doctor.working && !doctor.bookable"
+              [attr.title]="doctor.doctorName + ': ' + doctor.hoursLabel + ' · ' + doctor.appointmentCount + ' appointments'">
+              {{ doctor.initials }}
+            </i>
+          </span>
+          <span class="day-availability">
+            <i></i>{{ calendarStateLabel(day.state) }}
+          </span>
+        </button>
+      </div>
+
+      <div class="calendar-legend" aria-label="Calendar legend">
+        <span><i class="available-dot"></i>Available</span>
+        <span><i class="partial-dot"></i>Partially booked</span>
+        <span><i class="full-dot"></i>Fully booked</span>
+        <span><i class="unavailable-dot"></i>Unavailable</span>
+      </div>
+    </article>
+
+    <aside class="panel hours-panel">
+      <div class="section-heading">
+        <div>
+          <h2>Doctor working hours</h2>
+          <span>{{ canEditWorkingHours ? 'Edit your database schedule' : 'Read-only database schedule' }}</span>
+        </div>
+        <span class="permission-badge" [class.editable]="canEditWorkingHours">
+          {{ canEditWorkingHours ? 'My schedule' : 'View only' }}
+        </span>
+      </div>
+
+      <label class="provider-field" *ngIf="!isDoctor">
+        Doctor
+        <select [(ngModel)]="hoursDoctorId" (ngModelChange)="selectHoursDoctor($event)">
+          <option *ngFor="let doctor of hoursDoctors" [ngValue]="doctor.id">{{ doctor.fullName }}</option>
+        </select>
+      </label>
+      <div class="locked-provider" *ngIf="isDoctor && hoursDoctors[0]">
+        <span>My availability</span>
+        <strong>{{ hoursDoctors[0].fullName }}</strong>
+      </div>
+
+      <div class="working-days" *ngIf="editableWorkingDays.length; else noWorkingHours">
+        <div class="working-day" *ngFor="let day of editableWorkingDays; let index = index"
+          [class.day-off]="!day.working">
+          <label class="day-toggle">
+            <input type="checkbox" [(ngModel)]="day.working" (ngModelChange)="toggleWorkingDay(day)"
+              [disabled]="!canEditWorkingHours" />
+            <span>{{ weekDayNames[index] }}</span>
+          </label>
+          <div class="hours-range">
+            <input type="time" [(ngModel)]="day.startTime" [disabled]="!canEditWorkingHours || !day.working" aria-label="Start time" />
+            <span>to</span>
+            <input type="time" [(ngModel)]="day.endTime" [disabled]="!canEditWorkingHours || !day.working" aria-label="End time" />
+          </div>
+        </div>
+      </div>
+      <ng-template #noWorkingHours><div class="empty-state compact-empty">No saved working hours for this doctor.</div></ng-template>
+
+      <button *ngIf="canEditWorkingHours" class="primary-button full" type="button" (click)="saveWorkingHours()"
+        [disabled]="savingHours || !editableWorkingDays.length">
+        {{ savingHours ? 'Saving...' : 'Save my working hours' }}
+      </button>
+      <p class="read-only-note" *ngIf="!canEditWorkingHours">
+        Secretaries can use these hours for scheduling but cannot change them.
+      </p>
+    </aside>
+  </div>
+
+  <ng-container *ngIf="selectedDate; else chooseDatePrompt">
+    <article class="panel timeline-panel">
+      <div class="section-heading timeline-heading">
+        <div>
+          <p class="eyebrow">Selected date</p>
+          <h2>{{ selectedDateLabel }}</h2>
+          <span *ngIf="selectedDoctor && selectedWorkingDay">
+            {{ selectedDoctor.fullName }} works {{ selectedWorkingDay.startTime | slice:0:5 }}–{{ selectedWorkingDay.endTime | slice:0:5 }}
+          </span>
+        </div>
+        <div class="filter-row" *ngIf="availableDoctors.length">
+          <label *ngIf="!isDoctor">
+            Available doctor
+            <select [(ngModel)]="selectedDoctorId" (ngModelChange)="selectScheduleDoctor($event)">
+              <option *ngFor="let doctor of availableDoctors" [ngValue]="doctor.id">{{ doctor.fullName }}</option>
+            </select>
+          </label>
+          <label>
+            Status
+            <select [(ngModel)]="statusFilter">
+              <option value="">All active statuses</option>
+              <option *ngFor="let status of editableStatuses" [ngValue]="status">{{ statusLabel(status) }}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="doctor-availability-list" *ngIf="!isDoctor">
+        <button type="button" *ngFor="let doctor of selectedDateDoctorAvailability"
+          [class.selected]="doctor.doctorId === selectedDoctorId"
+          [class.not-working]="!doctor.working"
+          [class.fully-booked]="doctor.working && !doctor.bookable"
+          [disabled]="!doctor.working"
+          (click)="selectScheduleDoctor(doctor.doctorId)">
+          <span class="doctor-avatar">{{ doctor.initials }}</span>
+          <span class="doctor-availability-copy">
+            <strong>{{ doctor.doctorName }}</strong>
+            <small>{{ doctor.hoursLabel }} · {{ doctor.appointmentCount }} appointment{{ doctor.appointmentCount === 1 ? '' : 's' }}</small>
+          </span>
+          <i>{{ !doctor.working ? 'Not working' : doctor.bookable ? 'Available' : 'Fully booked' }}</i>
+        </button>
+      </div>
+
+      <div class="past-date-message" *ngIf="isSelectedDatePast">
+        This is a past date. Existing appointments remain visible, but new appointments and rescheduling are disabled.
+      </div>
+
+      <div class="empty-state availability-empty" *ngIf="!availableDoctors.length">
+        <strong>{{ isDoctor ? 'You are not working on this date.' : 'No doctor is available on this date.' }}</strong>
+        <span>{{ isDoctor ? 'Choose another date or update your working hours above.' : 'Choose another date; only doctors can update their working hours.' }}</span>
+      </div>
+
+      <ng-container *ngIf="selectedDoctor && selectedWorkingDay">
+        <div class="timeline-legend">
+          <span><i class="slot-available-dot"></i>Available — click to schedule</span>
+          <span><i class="slot-occupied-dot"></i>Occupied</span>
+          <span><i class="slot-unavailable-dot"></i>Unavailable / protected gap</span>
+        </div>
+
+        <div class="timeline-scroll">
+          <div class="timeline-head">
+            <span>Time</span>
+            <strong>{{ selectedDoctor.fullName }}</strong>
+          </div>
+          <div class="timeline-body" [style.height.px]="timelineHeight">
+            <div class="time-axis">
+              <span *ngFor="let slot of timeSlots; let index = index" [style.top.px]="index * 45">{{ slot }}</span>
+            </div>
+            <div class="provider-lane">
+              <button class="drop-slot" type="button" *ngFor="let slot of timeSlots; let index = index"
+                [style.top.px]="index * 45" [style.height.px]="45"
+                [class.available]="slotState(slot) === 'available'"
+                [class.occupied]="slotState(slot) === 'occupied'"
+                [class.unavailable]="slotState(slot) === 'unavailable'"
+                [attr.aria-disabled]="slotState(slot) !== 'available'"
+                (click)="openSlot(slot)"
+                (dragover)="allowDrop($event, slot)"
+                (drop)="dropAppointment($event, selectedDoctor.id, slot)"
+                [attr.aria-label]="slotState(slot) === 'available' ? 'Schedule at ' + slot : slot + ' is ' + slotState(slot)">
+                <span>{{ slotState(slot) === 'available' ? 'Available' : slotState(slot) === 'occupied' ? 'Occupied' : 'Unavailable' }}</span>
+              </button>
+
+              <article class="timeline-appointment" *ngFor="let appointment of selectedTimelineAppointments"
+                [draggable]="!isSelectedDatePast" (dragstart)="dragStarted(appointment)" (dragend)="dragEnded()"
+                (click)="openAppointmentModal(appointment)"
+                [ngStyle]="appointmentStyle(appointment)" [class.has-warning]="appointment.warnings.length"
+                [class.compact]="appointment.durationMinutes <= 45"
+                [attr.title]="appointment.clientName + ' · ' + appointment.startTime.slice(0, 5) + '–' + appointment.endTime.slice(0, 5) + ' · ' + appointment.treatmentType">
+                <strong>{{ appointment.startTime | slice:0:5 }}–{{ appointment.endTime | slice:0:5 }} · {{ appointment.clientName }}</strong>
+                <span>{{ statusLabel(appointment.status) }} · {{ appointment.treatmentType }}</span>
+                <small>{{ formatDuration(appointment.durationMinutes) }}</small>
+                <div class="timeline-actions">
+                  <button type="button" (click)="$event.stopPropagation(); openAppointmentModal(appointment)">Edit</button>
+                  <button type="button" class="danger" (click)="$event.stopPropagation(); requestCancellation(appointment)">Cancel</button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="no-slots" *ngIf="!canCreateOnSelectedDate && !isSelectedDatePast && selectedTimelineAppointments.length">
+          No 30-minute opening remains for this doctor. Existing appointments can still be reviewed or cancelled.
+        </div>
+      </ng-container>
+
+      <div class="legacy-list" *ngIf="legacySelectedAppointments.length">
+        <strong>Legacy appointments needing assignment</strong>
+        <article *ngFor="let appointment of legacySelectedAppointments">
+          <span>{{ appointment.startTime | slice:0:5 }} · {{ appointment.clientName }} · {{ appointment.providerName }}</span>
+          <button class="ghost-button" type="button" (click)="openAppointmentModal(appointment)">Assign doctor</button>
+        </article>
+      </div>
+    </article>
+
+    <details class="panel cancelled-panel" [open]="cancelledAppointments.length > 0">
+      <summary>Cancelled appointments <span>{{ cancelledAppointments.length }}</span></summary>
+      <div class="cancelled-list" *ngIf="cancelledAppointments.length; else noCancelled">
+        <article *ngFor="let appointment of cancelledAppointments">
+          <div>
+            <strong>{{ appointment.clientName }}</strong>
+            <span>{{ appointment.startTime | slice:0:5 }}–{{ appointment.endTime | slice:0:5 }} · {{ appointment.providerName }}</span>
+          </div>
+          <span class="table-actions">
+            <span class="status-pill cancelled">Cancelled</span>
+            <button type="button" class="danger" (click)="deleteCancelledAppointment(appointment)">Delete</button>
+          </span>
+        </article>
+      </div>
+      <ng-template #noCancelled><p class="empty-copy">No cancelled appointments for this date.</p></ng-template>
+    </details>
+  </ng-container>
+
+  <ng-template #chooseDatePrompt>
+    <article class="panel choose-date-prompt">
+      <span class="prompt-icon">📅</span>
+      <div>
+        <h2>Choose a date to open the timetable</h2>
+        <p>The available doctors, real working range, open periods, and existing appointments will appear here.</p>
+      </div>
+    </article>
+  </ng-template>
+
+  <article class="panel table-panel">
+    <div class="section-heading">
+      <div><h2>Appointments table</h2><span>{{ tableAppointments.length }} database records</span></div>
+      <div class="table-tools">
+        <input type="search" [(ngModel)]="query" placeholder="Search patient, doctor, or treatment" />
+        <select *ngIf="!isDoctor" [(ngModel)]="dentistFilter" aria-label="Filter table by doctor">
+          <option value="">All doctors</option>
+          <option *ngFor="let doctor of doctors" [value]="doctor.id">{{ doctor.fullName }}</option>
+        </select>
+        <button class="ghost-button" type="button" (click)="loadAppointments()" [disabled]="loading">Refresh</button>
+      </div>
+    </div>
+    <div class="appointment-table">
+      <div class="table-row table-head">
+        <span>Patient</span><span>Doctor</span><span>Date</span><span>Start</span><span>End</span>
+        <span>Status</span><span>Treatment / reason</span><span>Actions</span>
+      </div>
+      <div class="table-row" *ngFor="let appointment of tableAppointments">
+        <span><strong>{{ appointment.clientName }}</strong><small *ngFor="let warning of appointment.warnings">{{ warning }}</small></span>
+        <span>{{ appointment.providerName }}</span>
+        <span>{{ appointment.date }}</span>
+        <span>{{ appointment.startTime | slice:0:5 }}</span>
+        <span>{{ appointment.endTime | slice:0:5 }}</span>
+        <span><i class="status-pill" [class.cancelled]="appointment.status === 'CANCELLED'">{{ statusLabel(appointment.status) }}</i></span>
+        <span>{{ appointment.treatmentType }}<small>{{ appointment.notes || 'No notes' }}</small></span>
+        <span class="table-actions">
+          <ng-container *ngIf="appointment.status === 'CANCELLED'; else activeActions">
+            <button type="button" class="danger" (click)="deleteCancelledAppointment(appointment)">Delete</button>
+          </ng-container>
+          <ng-template #activeActions>
+            <button type="button" (click)="openAppointmentModal(appointment)">Edit</button>
+            <button type="button" class="danger" (click)="requestCancellation(appointment)">Cancel</button>
+          </ng-template>
+        </span>
+      </div>
+      <div class="empty-state" *ngIf="!tableAppointments.length && !loading">No matching appointments.</div>
+    </div>
+  </article>
+</section>
+
+<app-modal [open]="appointmentModal" [title]="editingAppointmentId ? 'Update appointment' : 'Add appointment'"
+  eyebrow="Schedule" (close)="appointmentModal = false">
+  <form class="form-grid" (ngSubmit)="saveAppointment()">
+    <label>Patient<select required name="patientId" [(ngModel)]="form.patientId"><option [ngValue]="0" disabled>Select patient</option><option *ngFor="let patient of patients" [ngValue]="patient.id">{{ patient.firstName }} {{ patient.lastName }}</option></select></label>
+    <label>Treatment ID<input type="number" min="1" name="treatmentId" [(ngModel)]="form.treatmentId" placeholder="Optional" /></label>
+    <label>Date<input type="date" required name="date" [(ngModel)]="form.date" (ngModelChange)="formDateChanged()" [attr.min]="editingAppointmentId ? null : today" /></label>
+    <label *ngIf="!isDoctor">Available doctor<select required name="providerUserId" [(ngModel)]="form.providerUserId"><option [ngValue]="0" disabled>Select doctor</option><option *ngFor="let doctor of formDoctorOptions" [ngValue]="doctor.id">{{ doctor.fullName }}</option></select></label>
+    <div class="locked-provider form-provider" *ngIf="isDoctor">
+      <span>Doctor</span>
+      <strong>{{ doctors[0]?.fullName || 'My schedule' }}</strong>
+    </div>
+    <label>Start time<input type="time" step="300" required name="startTime" [(ngModel)]="form.startTime" (ngModelChange)="startChanged()" /></label>
+    <label>End time<input type="time" step="300" required name="endTime" [(ngModel)]="form.endTime" /></label>
+    <div class="duration-preview full-field"><span>Calculated duration</span><strong>{{ formatDuration(formDuration) }}</strong></div>
+    <label>Status<select name="status" [(ngModel)]="form.status"><option *ngFor="let status of editableStatuses" [ngValue]="status">{{ statusLabel(status) }}</option></select></label>
+    <label>Priority<select name="priority" [(ngModel)]="form.priority"><option *ngFor="let priority of priorities" [ngValue]="priority">{{ priority }}</option></select></label>
+    <label class="full-field">Notes<textarea rows="4" name="notes" [(ngModel)]="form.notes" placeholder="Treatment, reason, or preparation notes"></textarea></label>
+    <div class="form-actions">
+      <button type="button" class="ghost-button" (click)="appointmentModal = false" [disabled]="saving">Close</button>
+      <button type="submit" class="primary-button" [disabled]="saving || !form.patientId || !form.providerUserId || formDuration <= 0">{{ saving ? 'Saving...' : 'Save appointment' }}</button>
+    </div>
+  </form>
+</app-modal>
+
+<app-modal [open]="!!pendingCancellation" title="Cancel appointment" eyebrow="Confirmation"
+  (close)="pendingCancellation = undefined">
+  <div class="cancel-confirmation" *ngIf="pendingCancellation">
+    <p>Cancel the appointment for <strong>{{ pendingCancellation.clientName }}</strong> on {{ pendingCancellation.date }} at {{ pendingCancellation.startTime | slice:0:5 }}?</p>
+    <p>The database record will be kept with the status <strong>CANCELLED</strong>.</p>
+    <div class="form-actions">
+      <button class="ghost-button" type="button" (click)="pendingCancellation = undefined">Keep appointment</button>
+      <button class="danger-button" type="button" (click)="confirmCancellation()">Cancel appointment</button>
+    </div>
+  </div>
+</app-modal>

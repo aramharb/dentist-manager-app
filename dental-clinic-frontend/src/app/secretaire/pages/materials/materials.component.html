@@ -1,0 +1,61 @@
+<section class="page fade-in">
+  <nav class="breadcrumb" aria-label="Breadcrumb">DentaCare Pro / Inventory / Materials</nav>
+  <div class="page-title">
+    <div><p class="eyebrow">Materials</p><h1>Dental stock control</h1><p class="page-subtitle">Track categories, suppliers, batches, expiration risk, consumption, and reorder urgency from one view.</p></div>
+    <button class="primary-button" (click)="openMaterial()">+ Add Material</button>
+  </div>
+
+  <div class="summary-grid">
+    <article class="summary-card"><span>Total SKUs</span><strong>{{ materials.length }}</strong><small>Saved inventory</small></article>
+    <article class="summary-card amber"><span>Low stock</span><strong>{{ countByStatus('LOW_STOCK') }}</strong><small>Reorder suggested</small></article>
+    <article class="summary-card danger"><span>Out of stock</span><strong>{{ countByStatus('OUT_OF_STOCK') }}</strong><small>Blocks treatment prep</small></article>
+  </div>
+
+  <div class="material-notice success" *ngIf="successMessage">{{ successMessage }}</div>
+  <div class="material-notice error" *ngIf="errorMessage && !modalOpen">{{ errorMessage }}</div>
+
+  <div class="toolbar">
+    <input class="search-input" [(ngModel)]="query" placeholder="Search material, supplier, category..." />
+    <select [(ngModel)]="filter"><option value="">All statuses</option><option value="AVAILABLE">Available</option><option value="LOW_STOCK">Low Stock</option><option value="OUT_OF_STOCK">Out of Stock</option></select>
+    <select [(ngModel)]="categoryFilter"><option value="">All categories</option><option *ngFor="let category of categories">{{ category }}</option></select>
+    <select [(ngModel)]="sortBy"><option value="name">Sort by name</option><option value="qty">Quantity</option><option value="exp">Expiration</option></select>
+  </div>
+
+  <div class="material-grid">
+    <article class="material-card" *ngFor="let material of filteredMaterials" [class.low]="material.status === 'LOW_STOCK'" [class.out]="material.status === 'OUT_OF_STOCK'" (click)="openMaterial(material)">
+      <div class="material-top"><span>{{ material.category }}</span><strong>{{ statusLabel(material.status) }}</strong></div>
+      <h3>{{ material.name }}</h3>
+      <p>{{ material.supplier }} - Batch {{ material.batchNumber }}</p>
+      <div class="stock-meter"><i [style.width.%]="stockPercent(material)"></i></div>
+      <dl><div><dt>Quantity</dt><dd>{{ material.quantity }} {{ material.unit }}</dd></div><div><dt>Minimum</dt><dd>{{ material.minimumStock }}</dd></div><div><dt>Expires</dt><dd>{{ material.expirationDate || 'Not set' }}</dd></div><div><dt>Purchase cost</dt><dd>{{ material.purchaseCost > 0 ? (material.purchaseCost | currency) : 'Not recorded' }}</dd></div></dl>
+      <button class="ghost-button" type="button">Edit Material</button>
+    </article>
+  </div>
+
+  <article class="panel">
+    <div class="section-heading"><h2>Recently used materials</h2><span>Consumption history</span></div>
+    <div class="activity-row" *ngFor="let material of materials">
+      <span class="timeline-marker"></span>
+      <p><strong>{{ material.name }}</strong> — {{ material.monthlyConsumption }} units used this month</p>
+      <span class="mini-pill">{{ material.category }}</span>
+    </div>
+  </article>
+</section>
+
+<app-modal [open]="modalOpen" [title]="selectedMaterial ? 'Edit material' : 'Add material'" eyebrow="Inventory" (close)="modalOpen = false">
+  <form class="form-grid" (ngSubmit)="saveMaterial()">
+    <label>Name <span class="required-mark">*</span><input name="name" [(ngModel)]="formModel.name" required /></label>
+    <label>Category <small>(optional)</small><input name="category" [(ngModel)]="formModel.category" /></label>
+    <label>Quantity <span class="required-mark">*</span><input type="number" name="quantity" [(ngModel)]="formModel.quantity" min="0" required /></label>
+    <label>Unit <small>(optional)</small><input name="unit" [(ngModel)]="formModel.unit" placeholder="boxes, packs, syringes..." /></label>
+    <label>Minimum stock <span class="required-mark">*</span><input type="number" name="minimumStock" [(ngModel)]="formModel.minimumStock" min="0" required /></label>
+    <label>Expiration date <span class="required-mark">*</span><input type="date" name="expirationDate" [(ngModel)]="formModel.expirationDate" required /></label>
+    <label>Supplier <small>(optional)</small><input name="supplier" [(ngModel)]="formModel.supplier" /></label>
+    <label>Status <small>(optional)</small><select name="status" [(ngModel)]="formModel.status"><option value="AVAILABLE">Available</option><option value="LOW_STOCK">Low Stock</option><option value="OUT_OF_STOCK">Out of Stock</option></select></label>
+    <label>Batch number <small>(optional)</small><input name="batchNumber" [(ngModel)]="formModel.batchNumber" /></label>
+    <label>Used per month <small>(optional)</small><input type="number" name="monthlyConsumption" [(ngModel)]="formModel.monthlyConsumption" min="0" /></label>
+    <label class="cost-field">Purchase cost <span class="required-mark">*</span><input type="number" name="purchaseCost" [(ngModel)]="formModel.purchaseCost" min="0.01" step="0.01" [readonly]="!!selectedMaterial?.purchaseExpenseId" required /><small *ngIf="!selectedMaterial || !selectedMaterial.purchaseExpenseId">This amount will automatically be added to Expenses.</small><small *ngIf="selectedMaterial?.purchaseExpenseId">Already linked to expense #{{ selectedMaterial?.purchaseExpenseId }}.</small></label>
+    <div class="material-notice error form-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+    <div class="form-actions"><button type="button" class="ghost-button" (click)="modalOpen = false">Cancel</button><button type="submit" class="primary-button" [disabled]="saving">{{ saving ? 'Saving...' : 'Save' }}</button></div>
+  </form>
+</app-modal>

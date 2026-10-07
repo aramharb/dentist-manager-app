@@ -1,0 +1,32 @@
+<section class="odontogram" aria-label="Interactive odontogram">
+  <header class="odontogram-toolbar">
+    <div><strong>Adult odontogram</strong><small>FDI permanent dentition</small></div>
+    <div class="selection-actions">
+      <button type="button" [class.active]="allTeeth" (click)="toggleAll()">Select all teeth</button>
+      <button type="button" class="clear-button" (click)="clear()">Clear</button>
+    </div>
+  </header>
+  <div class="arch upper-arch">
+    <span class="arch-label">Upper jaw</span>
+    <div class="jaw">
+      <button type="button" *ngFor="let tooth of upper; let i = index" class="tooth" [class]="visualFor(tooth)" [class.arch-gap]="i === 8" (click)="toggle(tooth)" [attr.aria-label]="'Tooth ' + tooth">
+        <span class="roots"><i></i><i></i></span><span class="tooth-crown"></span><strong>{{ tooth }}</strong>
+        <em *ngIf="procedureCount(tooth)">{{ procedureCount(tooth) }}</em>
+      </button>
+    </div>
+  </div>
+  <div class="mouth-line"><span>Right</span><i></i><span>Left</span></div>
+  <div class="arch lower-arch">
+    <div class="jaw lower">
+      <button type="button" *ngFor="let tooth of lower; let i = index" class="tooth" [class]="visualFor(tooth)" [class.arch-gap]="i === 8" (click)="toggle(tooth)" [attr.aria-label]="'Tooth ' + tooth">
+        <strong>{{ tooth }}</strong><span class="tooth-crown"></span><span class="roots"><i></i><i></i></span>
+        <em *ngIf="procedureCount(tooth)">{{ procedureCount(tooth) }}</em>
+      </button>
+    </div>
+    <span class="arch-label">Lower jaw</span>
+  </div>
+  <footer class="legend">
+    <span><i class="healthy-dot"></i>Healthy</span><span><i class="planned-dot"></i>Planned</span>
+    <span><i class="active-dot"></i>In progress</span><span><i class="complete-dot"></i>Completed</span>
+  </footer>
+</section>

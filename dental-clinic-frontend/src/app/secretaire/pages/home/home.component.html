@@ -1,0 +1,75 @@
+<section class="page fade-in">
+  <nav class="breadcrumb" aria-label="Breadcrumb">DentaCare Pro / Workspace / Today</nav>
+  <div class="page-title">
+    <div>
+      <p class="eyebrow">Accueil</p>
+      <h1>Clinic command center</h1>
+      <p class="page-subtitle">A focused morning view for reception, chair flow, inventory alerts, and patient follow-ups.</p>
+    </div>
+    <button class="primary-button">+ Quick appointment</button>
+  </div>
+
+  <div class="stat-grid">
+    <article class="stat-card"><span>Today's clients</span><strong>{{ todayClients }}</strong><small>3 waiting, 1 in treatment</small></article>
+    <article class="stat-card cyan"><span>Appointments this week</span><strong>27</strong><small>+12% vs last week</small></article>
+    <article class="stat-card mint"><span>Checked-in patients</span><strong>3</strong><small>Reception queue</small></article>
+    <article class="stat-card amber"><span>Stock alerts</span><strong>{{ lowStock }}</strong><small>Needs secretary review</small></article>
+  </div>
+
+  <div class="dashboard-grid">
+    <article class="panel wide">
+      <div class="section-heading"><h2>Today's chair flow</h2><span>{{ todaysAppointments.length }} booked</span></div>
+      <div class="timeline-board">
+        <div class="time-slot" *ngFor="let slot of daySlots">
+          <span>{{ slot }}</span>
+          <article class="appointment-row" *ngIf="appointmentAt(slot) as appt" [style.--accent]="appt.color">
+            <div class="avatar small">{{ appt.photo }}</div>
+            <div><strong>{{ appt.clientName }}</strong><p>{{ appt.treatmentType }} with {{ appt.dentist }}</p></div>
+            <span class="status-pill">{{ appt.status }}</span>
+          </article>
+          <button class="empty-slot" *ngIf="!appointmentAt(slot)">Open slot</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="section-heading"><h2>Quick actions</h2><span>Ctrl K</span></div>
+      <div class="quick-actions">
+        <button>New patient</button><button>Book visit</button><button>Check in</button><button>Stock entry</button>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="section-heading"><h2>Inventory alerts</h2><span>Materials</span></div>
+      <div class="material-mini" *ngFor="let item of lowStockMaterials">
+        <span>{{ item.name }}<small>{{ item.supplier }} - {{ item.batchNumber }}</small></span><strong>{{ item.quantity }} {{ item.unit }}</strong>
+      </div>
+    </article>
+
+    <article class="panel wide">
+      <div class="section-heading"><h2>Recent activity timeline</h2><span>Live mock feed</span></div>
+      <div class="timeline">
+        <div><span></span><p>Ahmed Mansouri confirmed tomorrow's follow-up.</p></div>
+        <div><span></span><p>Composite Resin A2 inventory updated.</p></div>
+        <div><span></span><p>Meriem Saadi profile completed by secretary.</p></div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="section-heading"><h2>Weekly preview</h2><span>Aug 4-10</span></div>
+      <div class="week-preview"><i *ngFor="let value of [72,88,64,91,54,28,18]" [style.height.%]="value"></i></div>
+    </article>
+
+    <article class="panel wide">
+      <div class="section-heading"><h2>Office expenses entry</h2><span>Secretary labels</span></div>
+      <div class="expense-grid">
+        <label *ngFor="let expense of officeExpenses">
+          <span>{{ expense.category }}</span>
+          <input [value]="expense.label" />
+          <small>Due {{ expense.dueDate }} - {{ expense.status }}</small>
+        </label>
+      </div>
+      <button class="primary-button">Save expense notes</button>
+    </article>
+  </div>
+</section>

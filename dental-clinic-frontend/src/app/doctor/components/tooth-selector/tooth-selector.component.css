@@ -1,0 +1,36 @@
+.odontogram { display: grid; gap: 14px; padding: 16px; border: 1px solid #d6e2e8; border-radius: 8px; background: #fbfdfe; overflow-x: auto; }
+.odontogram-toolbar, .selection-actions, .mouth-line, .legend { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.odontogram-toolbar strong, .odontogram-toolbar small { display: block; }
+.odontogram-toolbar small { margin-top: 2px; color: #687d8d; }
+.selection-actions button { border: 1px solid #bfd3df; border-radius: 6px; padding: 8px 10px; background: #fff; color: #24465c; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.selection-actions button.active { border-color: #0796c7; background: #e6f7fc; color: #075c7a; }
+.selection-actions .clear-button { color: #6b7280; }
+.arch { display: grid; gap: 6px; min-width: 720px; }
+.arch-label { text-align: center; color: #748795; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.jaw { display: grid; grid-template-columns: repeat(16, minmax(34px, 1fr)); gap: 5px; align-items: end; }
+.jaw.lower { align-items: start; }
+.tooth { position: relative; min-height: 82px; border: 1px solid transparent; border-radius: 6px; padding: 5px 2px; background: transparent; color: #435b6b; cursor: pointer; display: grid; justify-items: center; align-content: center; gap: 2px; transition: background .16s ease, border-color .16s ease, transform .16s ease; }
+.tooth:hover { transform: translateY(-2px); border-color: #b8d0dd; background: #f1f8fb; }
+.tooth.arch-gap { margin-left: 7px; }
+.tooth strong { font-size: 11px; line-height: 1; }
+.tooth-crown { width: 28px; height: 25px; border: 2px solid currentColor; border-radius: 9px 9px 6px 6px; background: white; box-shadow: inset 0 -5px 0 rgba(90, 112, 126, .08); }
+.roots { display: flex; gap: 3px; height: 23px; }
+.roots i { display: block; width: 5px; height: 23px; border: 2px solid currentColor; border-top: 0; border-radius: 0 0 8px 8px; transform: rotate(5deg); opacity: .65; }
+.roots i:last-child { transform: rotate(-5deg); }
+.tooth em { position: absolute; top: 3px; right: 3px; min-width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; background: #173f57; color: white; font-size: 9px; font-style: normal; font-weight: 900; }
+.mouth-line { min-width: 720px; color: #8294a1; font-size: 10px; text-transform: uppercase; }
+.mouth-line i { flex: 1; height: 10px; border-top: 1px solid #bdcfd9; border-radius: 50%; }
+.selected { border-color: #0796c7; background: #e7f7fc; color: #05749b; }
+.completed { color: #16815a; background: #edf9f3; }
+.in-progress { color: #b66a08; background: #fff8e9; }
+.planned { color: #68798a; background: #f0f4f7; }
+.missing { color: #c4424f; background: #fff1f2; opacity: .7; }
+.implant { color: #6553b8; background: #f3f1ff; }
+.crown { color: #087f91; background: #eafafa; }
+.legend { justify-content: center; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid #e5edf1; color: #657987; font-size: 11px; }
+.legend span { display: flex; align-items: center; gap: 5px; }
+.legend i { width: 8px; height: 8px; border-radius: 50%; background: #c7d4dc; }
+.legend .planned-dot { background: #7b8d9d; }
+.legend .active-dot { background: #d98516; }
+.legend .complete-dot { background: #1b966b; }
+@media (max-width: 760px) { .odontogram-toolbar { align-items: stretch; flex-direction: column; } .selection-actions { justify-content: stretch; } .selection-actions button { flex: 1; } }

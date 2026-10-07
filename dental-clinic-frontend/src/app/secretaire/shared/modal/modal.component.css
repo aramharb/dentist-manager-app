@@ -1,0 +1,61 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(11, 31, 46, 0.32);
+  animation: fadeSlide 0.22s ease both;
+}
+
+.modal-panel {
+  width: min(820px, 96vw);
+  max-height: 88vh;
+  overflow: auto;
+  background: white;
+  border-radius: 22px;
+  padding: 22px;
+  box-shadow: 0 35px 90px rgba(14, 48, 70, 0.25);
+  animation: modalIn 0.25s ease both;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.icon-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 16px;
+  color: var(--primary-dark);
+  background: rgba(237, 246, 253, 0.95);
+  box-shadow: 0 12px 26px rgba(24, 95, 142, 0.09);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes fadeSlide {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
