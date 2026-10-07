@@ -2,7 +2,23 @@ import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
 
-export type UserRole = 'doctor' | 'secretaire';
+export type UserRole = 'doctor' | 'secretaire' | 'admin';
+
+const WORKSPACES: Record<UserRole, string> = {
+  doctor: '/doctor',
+  secretaire: '/secretaire',
+  admin: '/admin',
+};
+
+/** URL prefix of each role's workspace. */
+export function workspaceFor(role: UserRole): string {
+  return WORKSPACES[role];
+}
+
+/** Landing page after login or when a role opens another role's workspace. */
+export function homeFor(role: UserRole): string {
+  return role === 'admin' ? '/admin' : `${workspaceFor(role)}/dashboard`;
+}
 export type SessionStatus = 'anonymous' | 'restored' | 'authenticated';
 
 export interface SessionUser {
@@ -137,7 +153,7 @@ export class SessionService {
       const token = storage.getItem(TOKEN_STORAGE_KEY);
       if (!rawUser || !token) return null;
       const user = JSON.parse(rawUser) as SessionUser;
-      if (!user.id || !user.username || !user.fullName || !['doctor', 'secretaire'].includes(user.role)) {
+      if (!user.id || !user.username || !user.fullName || !Object.hasOwn(WORKSPACES, user.role)) {
         throw new Error('Invalid cached session');
       }
       return { user, token, status: 'restored' };
@@ -150,9 +166,7 @@ export class SessionService {
 
   private roleMatchesCurrentWorkspace(role: UserRole): boolean {
     const path = window.location.pathname.toLowerCase();
-    if (path.startsWith('/doctor')) return role === 'doctor';
-    if (path.startsWith('/secretaire')) return role === 'secretaire';
-    return false;
+    return path.startsWith(workspaceFor(role));
   }
 
   private isBrowser(): boolean {

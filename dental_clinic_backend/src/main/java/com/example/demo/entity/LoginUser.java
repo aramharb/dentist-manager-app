@@ -38,4 +38,6 @@ public class LoginUser {
     public void setPassword(String password) { this.password = password; }
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

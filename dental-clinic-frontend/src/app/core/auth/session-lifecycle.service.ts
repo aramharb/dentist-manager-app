@@ -6,7 +6,7 @@ import { Subscription, catchError, distinctUntilChanged, exhaustMap, firstValueF
 import { AuthService } from '../../login/auth.service';
 import { MessageService } from '../../shared/services/message.service';
 import { NotificationService } from '../notifications/notification.service';
-import { SessionService } from './session.service';
+import { SessionService, homeFor, workspaceFor } from './session.service';
 
 const SESSION_SYNC_INTERVAL_MS = 45_000;
 
@@ -73,7 +73,9 @@ export class SessionLifecycleService {
         .subscribe((identity) => {
           if (identity.authenticated && identity.token) {
             this.hadIdentifiedUser = true;
-            this.messages.connect(identity.token);
+            // The admin console has no messaging; the server only accepts staff subscriptions.
+            if (identity.role === 'admin') this.messages.disconnect();
+            else this.messages.connect(identity.token);
             this.startSynchronization();
             this.enforceRoleRoute();
             return;
@@ -138,10 +140,12 @@ export class SessionLifecycleService {
 
   private enforceRoleRoute(): void {
     const role = this.session.currentUser?.role;
-    if (role === 'doctor' && this.router.url.startsWith('/secretaire')) {
-      void this.router.navigateByUrl('/doctor/dashboard');
-    } else if (role === 'secretaire' && this.router.url.startsWith('/doctor')) {
-      void this.router.navigateByUrl('/secretaire/dashboard');
+    if (!role) return;
+    const otherWorkspaces = (['doctor', 'secretaire', 'admin'] as const)
+      .filter((candidate) => candidate !== role)
+      .map((candidate) => workspaceFor(candidate));
+    if (otherWorkspaces.some((prefix) => this.router.url.startsWith(prefix))) {
+      void this.router.navigateByUrl(homeFor(role));
     }
   }
 }

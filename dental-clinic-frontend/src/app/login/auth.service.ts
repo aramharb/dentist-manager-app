@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, switchMap, tap } from 'rxjs';
-import { SessionService, SessionUser, UserRole } from '../core/auth/session.service';
+import { SessionService, SessionUser, UserRole, homeFor } from '../core/auth/session.service';
 
 export type { UserRole } from '../core/auth/session.service';
 
@@ -51,7 +51,7 @@ export class AuthService {
   }
 
   getRedirectUrl(role: UserRole): string {
-    return role === 'doctor' ? '/doctor/dashboard' : '/secretaire/dashboard';
+    return homeFor(role);
   }
 
 }

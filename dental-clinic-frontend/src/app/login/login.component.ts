@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from './auth.service';
-import { SessionService, UserRole } from '../core/auth/session.service';
+import { SessionService, UserRole, workspaceFor } from '../core/auth/session.service';
 import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.component';
 
 @Component({
@@ -91,8 +91,8 @@ export class LoginComponent implements OnInit {
 
   private destinationFor(role: UserRole): string {
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-    const allowedPrefix = role === 'doctor' ? '/doctor/' : '/secretaire/';
-    return returnUrl?.startsWith(allowedPrefix)
+    const workspace = workspaceFor(role);
+    return returnUrl && (returnUrl === workspace || returnUrl.startsWith(`${workspace}/`))
       ? returnUrl
       : this.authService.getRedirectUrl(role);
   }

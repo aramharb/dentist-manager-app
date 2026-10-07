@@ -20,6 +20,9 @@ public interface LoginUserRepository extends JpaRepository<LoginUser, Long> {
     Optional<LoginUser> findByIdForUpdate(@Param("id") Long id);
     Optional<LoginUser> findByUsernameIgnoreCaseAndActiveTrue(String username);
     List<LoginUser> findByActiveTrueOrderByRoleAscFullNameAsc();
+    List<LoginUser> findAllByOrderByRoleAscFullNameAsc();
+    boolean existsByUsernameIgnoreCase(String username);
+    long countByRoleIgnoreCaseAndActiveTrue(String role);
     List<LoginUser> findByRoleIgnoreCaseAndActiveTrue(String role);
     Optional<LoginUser> findFirstByFullNameIgnoreCaseAndRoleIgnoreCaseAndActiveTrue(String fullName, String role);
     Optional<LoginUser> findFirstByUsernameIgnoreCaseAndRoleIgnoreCaseAndActiveTrue(String username, String role);

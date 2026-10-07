@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { SessionService, UserRole } from './session.service';
+import { SessionService, UserRole, homeFor } from './session.service';
 
 export const authenticatedGuard: CanActivateFn = (_route, state) => {
   const session = inject(SessionService);
@@ -17,9 +17,8 @@ export function roleGuard(role: UserRole): CanActivateFn {
     if (!session.isAuthenticated) {
       return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
     }
-    if (session.currentUser?.role === role) return true;
-    return router.createUrlTree([
-      session.currentUser?.role === 'doctor' ? '/doctor/dashboard' : '/secretaire/dashboard',
-    ]);
+    const currentRole = session.currentUser?.role;
+    if (currentRole === role) return true;
+    return router.parseUrl(currentRole ? homeFor(currentRole) : '/login');
   };
 }

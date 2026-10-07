@@ -44,5 +44,10 @@ export const routes: Routes = [
       { path: 'dashboard', loadComponent: () => import('./secretaire/pages/dashboard/dashboard.component').then((m) => m.DashboardComponent) },
     ],
   },
+  {
+    path: 'admin',
+    canActivate: [authenticatedGuard, roleGuard('admin')],
+    loadComponent: () => import('./admin/admin.component').then((m) => m.AdminComponent),
+  },
   { path: '**', redirectTo: 'login' },
 ];

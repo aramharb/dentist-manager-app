@@ -44,6 +44,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public List<UserDto.Response> users() {
         return userRepository.findByActiveTrueOrderByRoleAscFullNameAsc().stream()
+                .filter(user -> !"admin".equalsIgnoreCase(user.getRole()))
                 .map(user -> new UserDto.Response(user.getId(), user.getUsername(), user.getFullName(), user.getRole(),
                         presenceService.isOnline(user.getUsername())))
                 .toList();
@@ -60,12 +61,14 @@ public class AuthService {
 
     public SessionUserDto toSessionUser(LoginUser user) {
         String role = normalize(user.getRole());
-        List<String> permissions = "doctor".equals(role)
-                ? List.of("dashboard:doctor", "patients:read", "patients:write", "patients:delete",
-                        "appointments:write", "treatments:write", "expenses:read", "messages:write",
-                        "staff-actions:undo")
-                : List.of("dashboard:secretary", "patients:read", "patients:write", "appointments:write",
-                        "expenses:write", "messages:write");
+        List<String> permissions = switch (role) {
+            case "doctor" -> List.of("dashboard:doctor", "patients:read", "patients:write", "patients:delete",
+                    "appointments:write", "treatments:write", "expenses:read", "messages:write",
+                    "staff-actions:undo");
+            case "admin" -> List.of("dashboard:admin", "users:read", "users:write");
+            default -> List.of("dashboard:secretary", "patients:read", "patients:write", "appointments:write",
+                    "expenses:write", "messages:write");
+        };
         return new SessionUserDto(user.getId(), user.getUsername(), user.getFullName(), role,
                 Boolean.TRUE.equals(user.getActive()), permissions);
     }
