@@ -45,6 +45,15 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'manager',
+    canActivate: [authenticatedGuard, roleGuard('manager')],
+    loadComponent: () => import('./manager/manager.component').then((m) => m.ManagerComponent),
+  },
+  {
+    path: 'invite/:token',
+    loadComponent: () => import('./invite/invite.component').then((m) => m.InviteComponent),
+  },
+  {
     path: 'admin',
     canActivate: [authenticatedGuard, roleGuard('admin')],
     loadComponent: () => import('./admin/admin.component').then((m) => m.AdminComponent),

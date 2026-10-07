@@ -79,6 +79,7 @@ public class AuthService {
                     "appointments:write", "treatments:write", "expenses:read", "messages:write",
                     "staff-actions:undo");
             case "admin" -> List.of("dashboard:admin", "users:read", "users:write");
+            case "manager" -> List.of("dashboard:manager", "cabinet-users:read", "cabinet-users:write");
             default -> List.of("dashboard:secretary", "patients:read", "patients:write", "appointments:write",
                     "expenses:write", "messages:write");
         };

@@ -2,11 +2,12 @@ import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
 
-export type UserRole = 'doctor' | 'secretaire' | 'admin';
+export type UserRole = 'doctor' | 'secretaire' | 'manager' | 'admin';
 
 const WORKSPACES: Record<UserRole, string> = {
   doctor: '/doctor',
   secretaire: '/secretaire',
+  manager: '/manager',
   admin: '/admin',
 };
 
@@ -17,7 +18,7 @@ export function workspaceFor(role: UserRole): string {
 
 /** Landing page after login or when a role opens another role's workspace. */
 export function homeFor(role: UserRole): string {
-  return role === 'admin' ? '/admin' : `${workspaceFor(role)}/dashboard`;
+  return role === 'admin' || role === 'manager' ? workspaceFor(role) : `${workspaceFor(role)}/dashboard`;
 }
 export type SessionStatus = 'anonymous' | 'restored' | 'authenticated';
 

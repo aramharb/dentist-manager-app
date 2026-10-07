@@ -455,3 +455,58 @@ tr.inactive td.actions-col {
   font-size: 18px;
   font-weight: 800;
 }
+
+.manager-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.manager-line span {
+  color: var(--muted, #5b7487);
+}
+
+.manager-line .warn {
+  color: var(--danger, #ef4444);
+}
+
+.pending {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.manager-fields {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(214, 230, 240, 0.9);
+  border-radius: 14px;
+}
+
+.manager-fields legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted, #5b7487);
+  font-size: 13px;
+}
+
+.role-badge[data-role='manager'] {
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.cabinet-card .row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}

@@ -73,8 +73,8 @@ export class SessionLifecycleService {
         .subscribe((identity) => {
           if (identity.authenticated && identity.token) {
             this.hadIdentifiedUser = true;
-            // The admin console has no messaging; the server only accepts staff subscriptions.
-            if (identity.role === 'admin') this.messages.disconnect();
+            // The admin and manager consoles have no messaging; the server only accepts staff subscriptions.
+            if (identity.role === 'admin' || identity.role === 'manager') this.messages.disconnect();
             else this.messages.connect(identity.token);
             this.startSynchronization();
             this.enforceRoleRoute();
@@ -141,7 +141,7 @@ export class SessionLifecycleService {
   private enforceRoleRoute(): void {
     const role = this.session.currentUser?.role;
     if (!role) return;
-    const otherWorkspaces = (['doctor', 'secretaire', 'admin'] as const)
+    const otherWorkspaces = (['doctor', 'secretaire', 'manager', 'admin'] as const)
       .filter((candidate) => candidate !== role)
       .map((candidate) => workspaceFor(candidate));
     if (otherWorkspaces.some((prefix) => this.router.url.startsWith(prefix))) {

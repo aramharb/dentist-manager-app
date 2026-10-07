@@ -7,10 +7,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.dto.AdminUserDto;
 import com.example.demo.dto.CabinetDto;
 import com.example.demo.entity.Cabinet;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.CabinetRepository;
+import com.example.demo.security.ClinicPrincipal;
 
 /**
  * Platform-admin operations on cabinets. Statistics are read with plain SQL on purpose:
@@ -21,9 +23,13 @@ public class CabinetAdminService {
     private final CabinetRepository cabinetRepository;
     private final JdbcTemplate jdbc;
 
-    public CabinetAdminService(CabinetRepository cabinetRepository, JdbcTemplate jdbc) {
+    private final UserAdminService userService;
+
+    public CabinetAdminService(CabinetRepository cabinetRepository, JdbcTemplate jdbc,
+            UserAdminService userService) {
         this.cabinetRepository = cabinetRepository;
         this.jdbc = jdbc;
+        this.userService = userService;
     }
 
     @Transactional(readOnly = true)
@@ -37,7 +43,10 @@ public class CabinetAdminService {
     }
 
     @Transactional
-    public CabinetDto.Response create(CabinetDto.Request request) {
+    public CabinetDto.Created create(CabinetDto.Request request, ClinicPrincipal actor) {
+        if (request.manager() == null) {
+            throw new IllegalArgumentException("A cabinet needs a manager: give the manager's name and username.");
+        }
         String code = code(request.code());
         String name = name(request.name());
         if (cabinetRepository.existsByCodeIgnoreCase(code)) {
@@ -53,7 +62,15 @@ public class CabinetAdminService {
         if (request.copyCatalogFromCabinetId() != null) {
             copyCatalog(find(request.copyCatalogFromCabinetId()).getId(), saved.getId());
         }
-        return toResponse(saved);
+        AdminUserDto.Created manager = userService.replaceManager(saved.getId(), request.manager().username(),
+                request.manager().fullName(), actor);
+        return new CabinetDto.Created(toResponse(saved), manager.invitation());
+    }
+
+    /** Appoints a new manager; the previous one is deactivated (exactly one active manager per cabinet). */
+    @Transactional
+    public AdminUserDto.Created replaceManager(Long id, CabinetDto.ManagerRequest request, ClinicPrincipal actor) {
+        return userService.replaceManager(find(id).getId(), request.username(), request.fullName(), actor);
     }
 
     @Transactional
@@ -72,12 +89,12 @@ public class CabinetAdminService {
         return toResponse(cabinetRepository.save(cabinet));
     }
 
-    /** Only an empty cabinet (no member, no data) can be removed; otherwise disable it. */
+    /** Only an empty cabinet (no doctor, secretary or data; its manager goes with it) can be removed. */
     @Transactional
     public void delete(Long id) {
         Cabinet cabinet = find(id);
         CabinetDto.Stats stats = stats(id);
-        Long members = jdbc.queryForObject("select count(*) from login where cabinet_id = ?", Long.class, id);
+        Long members = jdbc.queryForObject("select count(*) from login where cabinet_id = ? and role <> 'manager'", Long.class, id);
         Long expenses = jdbc.queryForObject("select count(*) from expense where cabinet_id = ?", Long.class, id);
         Long materials = jdbc.queryForObject("select count(*) from material_inventory where cabinet_id = ?",
                 Long.class, id);
@@ -87,6 +104,7 @@ public class CabinetAdminService {
             throw new BusinessRuleException(
                     "Only an empty cabinet can be deleted. Disable it instead to keep its data.");
         }
+        jdbc.update("delete from login where cabinet_id = ? and role = 'manager'", id);
         jdbc.update("delete from procedure_catalog where cabinet_id = ?", id);
         jdbc.update("delete from conversation where cabinet_id = ?", id);
         jdbc.update("delete from staff_action where cabinet_id = ?", id);
@@ -131,7 +149,8 @@ public class CabinetAdminService {
     private CabinetDto.Response toResponse(Cabinet cabinet) {
         return new CabinetDto.Response(cabinet.getId(), cabinet.getName(), cabinet.getCode(), cabinet.getAddress(),
                 cabinet.getPhoneNumber(), cabinet.getEmail(), Boolean.TRUE.equals(cabinet.getActive()),
-                cabinet.getCreatedAt(), cabinet.getUpdatedAt(), stats(cabinet.getId()));
+                cabinet.getCreatedAt(), cabinet.getUpdatedAt(), stats(cabinet.getId()),
+                userService.activeManagerOf(cabinet.getId()));
     }
 
     private String code(String value) {

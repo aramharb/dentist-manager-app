@@ -8,9 +8,10 @@ import { SessionService, UserRole } from '../core/auth/session.service';
 import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.component';
 import { NotificationService } from '../core/notifications/notification.service';
 import { ModalComponent } from '../secretaire/shared/modal/modal.component';
-import { AdminCabinetService, AdminUser, AdminUserService, Cabinet } from './admin-user.service';
+import { InvitationLinkComponent } from '../shared/invitation-link/invitation-link.component';
+import { AdminCabinetService, AdminUser, AdminUserService, Cabinet, Invitation } from './admin-user.service';
 
-type DialogMode = 'create' | 'edit' | 'password' | 'cabinet-create' | 'cabinet-edit';
+type DialogMode = 'create' | 'edit' | 'cabinet-create' | 'cabinet-edit' | 'manager';
 type AdminView = 'cabinets' | 'accounts';
 
 interface UserForm {
@@ -18,8 +19,6 @@ interface UserForm {
   fullName: string;
   role: UserRole;
   active: boolean;
-  password: string;
-  confirmPassword: string;
   cabinetId: number | null;
 }
 
@@ -31,18 +30,21 @@ interface CabinetForm {
   email: string;
   active: boolean;
   copyCatalogFromCabinetId: number | null;
+  managerFullName: string;
+  managerUsername: string;
 }
 
 const ROLE_LABELS: Record<UserRole, string> = {
   doctor: 'Doctor',
   secretaire: 'Secretary',
+  manager: 'Cabinet manager',
   admin: 'Admin',
 };
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, LanguageSwitcherComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, LanguageSwitcherComponent, ModalComponent, InvitationLinkComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css',
 })
@@ -110,6 +112,7 @@ export class AdminComponent implements OnInit {
   selected: AdminUser | null = null;
   selectedCabinet: Cabinet | null = null;
   form: UserForm = this.emptyForm();
+  invitation: Invitation | null = null;
   cabinetForm: CabinetForm = this.emptyCabinetForm();
   formError = '';
 
@@ -161,6 +164,8 @@ export class AdminComponent implements OnInit {
       email: cabinet.email ?? '',
       active: cabinet.active,
       copyCatalogFromCabinetId: null,
+      managerFullName: '',
+      managerUsername: '',
     };
     this.openDialog('cabinet-edit');
   }
@@ -227,10 +232,26 @@ export class AdminComponent implements OnInit {
     this.openDialog('edit');
   }
 
-  openPassword(user: AdminUser): void {
-    this.selected = user;
-    this.form = this.emptyForm();
-    this.openDialog('password');
+  /** A fresh one-time link: first password for a new account, or a new password for a forgotten one. */
+  sendInvitation(user: AdminUser): void {
+    this.saving.set(true);
+    this.users.invite(user.id).subscribe({
+      next: (invitation) => this.showInvitation(invitation),
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.notify('Link not created', this.errorMessage(error));
+      },
+    });
+  }
+
+  openReplaceManager(cabinet: Cabinet): void {
+    this.selectedCabinet = cabinet;
+    this.cabinetForm = { ...this.emptyCabinetForm(), name: cabinet.name };
+    this.openDialog('manager');
+  }
+
+  closeInvitation(): void {
+    this.invitation = null;
   }
 
   closeDialog(): void {
@@ -244,11 +265,20 @@ export class AdminComponent implements OnInit {
     return this.dialogMode === 'cabinet-create' || this.dialogMode === 'cabinet-edit';
   }
 
+  private showInvitation(invitation: Invitation): void {
+    this.saving.set(false);
+    this.dialogMode = null;
+    this.selected = null;
+    this.selectedCabinet = null;
+    this.invitation = invitation;
+    this.load();
+  }
+
   get dialogTitle(): string {
+    if (this.dialogMode === 'manager') return `Manager of ${this.selectedCabinet?.name ?? 'cabinet'}`;
     if (this.dialogMode === 'cabinet-create') return 'New cabinet';
     if (this.dialogMode === 'cabinet-edit') return `Edit ${this.selectedCabinet?.name ?? 'cabinet'}`;
     if (this.dialogMode === 'create') return 'New account';
-    if (this.dialogMode === 'password') return `Reset password: ${this.selected?.fullName ?? ''}`;
     return `Edit ${this.selected?.fullName ?? 'account'}`;
   }
 
@@ -269,6 +299,18 @@ export class AdminComponent implements OnInit {
     this.formError = this.validate();
     if (this.formError) return;
 
+    if (this.dialogMode === 'manager' && this.selectedCabinet) {
+      const { managerFullName, managerUsername } = this.cabinetForm;
+      this.saving.set(true);
+      this.cabinetApi
+        .replaceManager(this.selectedCabinet.id, { fullName: managerFullName.trim(), username: managerUsername.trim() })
+        .subscribe({
+          next: (created) => this.showInvitation(created.invitation),
+          error: (error: HttpErrorResponse) => this.fail(error),
+        });
+      return;
+    }
+
     if (this.isCabinetDialog) {
       const { name, code, address, phoneNumber, email, active, copyCatalogFromCabinetId } = this.cabinetForm;
       const base = {
@@ -278,31 +320,40 @@ export class AdminComponent implements OnInit {
         phoneNumber: phoneNumber.trim() || null,
         email: email.trim() || null,
       };
+      this.saving.set(true);
       if (this.dialogMode === 'cabinet-create') {
-        this.save(
-          this.cabinetApi.create({ ...base, active, copyCatalogFromCabinetId }),
-          `${base.name} was created. Add its doctors and secretaries from the Accounts tab.`,
-        );
+        this.cabinetApi
+          .create({
+            ...base,
+            active,
+            copyCatalogFromCabinetId,
+            manager: {
+              fullName: this.cabinetForm.managerFullName.trim(),
+              username: this.cabinetForm.managerUsername.trim(),
+            },
+          })
+          .subscribe({
+            next: (created) => this.showInvitation(created.managerInvitation),
+            error: (error: HttpErrorResponse) => this.fail(error),
+          });
       } else if (this.selectedCabinet) {
-        this.save(this.cabinetApi.update(this.selectedCabinet.id, { ...base, active }), `${base.name} was updated.`);
+        this.cabinetApi.update(this.selectedCabinet.id, { ...base, active }).subscribe(this.done(`${base.name} was updated.`));
       }
       return;
     }
 
-    const { username, fullName, role, active, password } = this.form;
+    const { username, fullName, role, active } = this.form;
     const cabinetId = role === 'admin' ? null : this.form.cabinetId;
+    this.saving.set(true);
     if (this.dialogMode === 'create') {
-      this.save(
-        this.users.create({ username, fullName, role, password, cabinetId }),
-        `${fullName} can now sign in.`,
-      );
+      this.users.create({ username, fullName, role, cabinetId }).subscribe({
+        next: (created) => this.showInvitation(created.invitation),
+        error: (error: HttpErrorResponse) => this.fail(error),
+      });
     } else if (this.dialogMode === 'edit' && this.selected) {
-      this.save(
-        this.users.update(this.selected.id, { username, fullName, role, active, cabinetId }),
-        `${fullName} was updated.`,
-      );
-    } else if (this.dialogMode === 'password' && this.selected) {
-      this.save(this.users.resetPassword(this.selected.id, password), `Password changed for ${this.selected.fullName}.`);
+      this.users
+        .update(this.selected.id, { username, fullName, role, active, cabinetId })
+        .subscribe(this.done(`${fullName} was updated.`));
     }
   }
 
@@ -312,7 +363,11 @@ export class AdminComponent implements OnInit {
 
   private save(request: Observable<unknown>, successMessage: string): void {
     this.saving.set(true);
-    request.subscribe({
+    request.subscribe(this.done(successMessage));
+  }
+
+  private done(successMessage: string) {
+    return {
       next: () => {
         this.saving.set(false);
         this.dialogMode = null;
@@ -321,16 +376,26 @@ export class AdminComponent implements OnInit {
         this.notify('Saved', successMessage);
         this.load();
       },
-      error: (error: HttpErrorResponse) => {
-        this.saving.set(false);
-        const message = this.errorMessage(error);
-        if (this.dialogMode) this.formError = message;
-        else this.notify('Change not saved', message);
-      },
-    });
+      error: (error: HttpErrorResponse) => this.fail(error),
+    };
+  }
+
+  private fail(error: HttpErrorResponse): void {
+    this.saving.set(false);
+    const message = this.errorMessage(error);
+    if (this.dialogMode) this.formError = message;
+    else this.notify('Change not saved', message);
   }
 
   private validate(): string {
+    if (this.dialogMode === 'manager' || this.dialogMode === 'cabinet-create') {
+      const { managerFullName, managerUsername } = this.cabinetForm;
+      if (!managerFullName.trim()) return 'The manager\'s full name is required.';
+      if (!/^[a-zA-Z0-9._-]{3,80}$/.test(managerUsername.trim())) {
+        return 'Manager username must be 3-80 characters: letters, digits, dot, dash or underscore.';
+      }
+    }
+    if (this.dialogMode === 'manager') return '';
     if (this.isCabinetDialog) {
       const { name, code } = this.cabinetForm;
       if (!name.trim()) return 'Cabinet name is required.';
@@ -339,19 +404,13 @@ export class AdminComponent implements OnInit {
       }
       return '';
     }
-    const { username, fullName, password, confirmPassword } = this.form;
-    if (this.dialogMode !== 'password') {
-      if (!/^[a-zA-Z0-9._-]{3,80}$/.test(username.trim())) {
-        return 'Username must be 3-80 characters: letters, digits, dot, dash or underscore.';
-      }
-      if (!fullName.trim()) return 'Full name is required.';
-      if (this.form.role !== 'admin' && this.form.cabinetId === null) {
-        return 'Choose the cabinet this account belongs to.';
-      }
+    const { username, fullName } = this.form;
+    if (!/^[a-zA-Z0-9._-]{3,80}$/.test(username.trim())) {
+      return 'Username must be 3-80 characters: letters, digits, dot, dash or underscore.';
     }
-    if (this.dialogMode !== 'edit') {
-      if (password.length < 6) return 'Password must be at least 6 characters.';
-      if (password !== confirmPassword) return 'The two passwords do not match.';
+    if (!fullName.trim()) return 'Full name is required.';
+    if (this.form.role !== 'admin' && this.form.cabinetId === null) {
+      return 'Choose the cabinet this account belongs to.';
     }
     return '';
   }
@@ -367,8 +426,6 @@ export class AdminComponent implements OnInit {
       fullName: '',
       role: 'secretaire',
       active: true,
-      password: '',
-      confirmPassword: '',
       cabinetId: null,
     };
   }
@@ -382,6 +439,8 @@ export class AdminComponent implements OnInit {
       email: '',
       active: true,
       copyCatalogFromCabinetId: null,
+      managerFullName: '',
+      managerUsername: '',
     };
   }
 

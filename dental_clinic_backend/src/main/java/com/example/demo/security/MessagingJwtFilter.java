@@ -29,7 +29,8 @@ public class MessagingJwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return HttpMethod.OPTIONS.matches(request.getMethod())
                 || !path.startsWith("/api/")
-                || path.equals("/api/login");
+                || path.equals("/api/login")
+                || path.startsWith("/api/invitations/");
     }
 
     @Override

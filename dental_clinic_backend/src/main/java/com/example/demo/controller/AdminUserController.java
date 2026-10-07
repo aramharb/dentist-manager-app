@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.AdminUserDto;
+import com.example.demo.dto.InvitationDto;
 import com.example.demo.security.ClinicPrincipal;
 import com.example.demo.service.MessagingAccessDeniedException;
 import com.example.demo.service.UserAdminService;
@@ -37,10 +38,10 @@ public class AdminUserController {
     }
 
     @PostMapping
-    public ResponseEntity<AdminUserDto.Response> create(@RequestBody AdminUserDto.CreateRequest request,
+    public ResponseEntity<AdminUserDto.Created> create(@RequestBody AdminUserDto.CreateRequest request,
             Principal principal) {
-        requireAdmin(principal);
-        return ResponseEntity.status(HttpStatus.CREATED).body(userAdminService.create(request));
+        ClinicPrincipal actor = requireAdmin(principal);
+        return ResponseEntity.status(HttpStatus.CREATED).body(userAdminService.create(request, actor));
     }
 
     @PutMapping("/{id}")
@@ -49,12 +50,9 @@ public class AdminUserController {
         return userAdminService.update(id, request, requireAdmin(principal));
     }
 
-    @PutMapping("/{id}/password")
-    public ResponseEntity<Void> resetPassword(@PathVariable Long id, @RequestBody AdminUserDto.PasswordRequest request,
-            Principal principal) {
-        requireAdmin(principal);
-        userAdminService.resetPassword(id, request);
-        return ResponseEntity.noContent().build();
+    @PostMapping("/{id}/invitation")
+    public InvitationDto.Created invite(@PathVariable Long id, Principal principal) {
+        return userAdminService.invite(id, requireAdmin(principal));
     }
 
     private ClinicPrincipal requireAdmin(Principal principal) {

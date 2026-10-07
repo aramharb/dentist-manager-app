@@ -5,12 +5,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.dto.AdminUserDto;
+import com.example.demo.dto.InvitationDto;
 import com.example.demo.entity.Cabinet;
 import com.example.demo.entity.LoginUser;
 import com.example.demo.repository.CabinetRepository;
@@ -20,15 +22,17 @@ import com.example.demo.security.ClinicPrincipal;
 
 @Service
 public class UserAdminService {
-    private static final Set<String> ROLES = Set.of("doctor", "secretaire", "admin");
-    private static final int MIN_PASSWORD_LENGTH = 6;
+    private static final Set<String> ROLES = Set.of("doctor", "secretaire", "manager", "admin");
+    private static final Set<String> MEMBER_ROLES = Set.of("doctor", "secretaire");
 
     private final LoginUserRepository userRepository;
     private final CabinetRepository cabinetRepository;
     private final JdbcTemplate jdbc;
+    private final InvitationService invitationService;
 
     public UserAdminService(LoginUserRepository userRepository, CabinetRepository cabinetRepository,
-            JdbcTemplate jdbc) {
+            JdbcTemplate jdbc, InvitationService invitationService) {
+        this.invitationService = invitationService;
         this.userRepository = userRepository;
         this.cabinetRepository = cabinetRepository;
         this.jdbc = jdbc;
@@ -40,27 +44,16 @@ public class UserAdminService {
         List<LoginUser> users = cabinetId == null
                 ? userRepository.findAllByOrderByRoleAscFullNameAsc()
                 : userRepository.findByCabinetIdOrderByRoleAscFullNameAsc(requireCabinet(cabinetId).getId());
-        Map<Long, String> names = new HashMap<>();
-        cabinetRepository.findAll().forEach(cabinet -> names.put(cabinet.getId(), cabinet.getName()));
+        Map<Long, String> names = cabinetNames();
         return users.stream().map(user -> toResponse(user, names)).toList();
     }
 
     @Transactional
-    public AdminUserDto.Response create(AdminUserDto.CreateRequest request) {
-        String username = username(request.username());
-        if (userRepository.existsByUsernameIgnoreCase(username)) {
-            throw new BusinessRuleException("Username \"" + username + "\" is already taken.");
-        }
-        LoginUser user = new LoginUser();
-        user.setUsername(username);
-        user.setFullName(fullName(request.fullName()));
-        user.setRole(role(request.role()));
-        user.setCabinetId(cabinetFor(user.getRole(), request.cabinetId()));
-        user.setPassword(password(request.password()));
-        user.setActive(true);
-        LoginUser saved = userRepository.saveAndFlush(user);
-        seedDefaultWorkingHours(saved);
-        return toResponse(saved);
+    public AdminUserDto.Created create(AdminUserDto.CreateRequest request, ClinicPrincipal actor) {
+        String role = role(request.role(), ROLES);
+        LoginUser saved = createUser(request.username(), request.fullName(), role,
+                cabinetFor(role, request.cabinetId()));
+        return created(saved, actor);
     }
 
     @Transactional
@@ -70,7 +63,7 @@ public class UserAdminService {
         if (!username.equalsIgnoreCase(user.getUsername()) && userRepository.existsByUsernameIgnoreCase(username)) {
             throw new BusinessRuleException("Username \"" + username + "\" is already taken.");
         }
-        String role = role(request.role());
+        String role = role(request.role(), ROLES);
         boolean active = request.active() == null ? Boolean.TRUE.equals(user.getActive()) : request.active();
 
         boolean wasActiveAdmin = "admin".equals(user.getRole()) && Boolean.TRUE.equals(user.getActive());
@@ -86,6 +79,7 @@ public class UserAdminService {
         if (!Objects.equals(cabinetId, user.getCabinetId()) || !role.equals(user.getRole())) {
             assertCanLeaveCabinet(user);
         }
+        assertSingleManager(user, role, active, cabinetId);
 
         user.setUsername(username);
         user.setFullName(fullName(request.fullName()));
@@ -97,11 +91,131 @@ public class UserAdminService {
         return toResponse(saved);
     }
 
+    /** A new link for an existing account (first password, or a forgotten one). */
     @Transactional
-    public void resetPassword(Long id, AdminUserDto.PasswordRequest request) {
-        LoginUser user = find(id);
-        user.setPassword(password(request.password()));
-        userRepository.save(user);
+    public InvitationDto.Created invite(Long id, ClinicPrincipal actor) {
+        return invitationService.create(find(id), actor.userId());
+    }
+
+    // ------------------------------------------------------------- cabinet manager
+
+    /** Doctors and secretaries of one cabinet (the manager account itself is not listed). */
+    @Transactional(readOnly = true)
+    public List<AdminUserDto.Response> listMembers(Long cabinetId) {
+        Map<Long, String> names = cabinetNames();
+        return userRepository.findByCabinetIdOrderByRoleAscFullNameAsc(cabinetId).stream()
+                .filter(user -> MEMBER_ROLES.contains(user.getRole()))
+                .map(user -> toResponse(user, names))
+                .toList();
+    }
+
+    @Transactional
+    public AdminUserDto.Created createMember(Long cabinetId, AdminUserDto.MemberCreateRequest request,
+            ClinicPrincipal actor) {
+        String role = role(request.role(), MEMBER_ROLES);
+        requireActiveCabinet(cabinetId);
+        return created(createUser(request.username(), request.fullName(), role, cabinetId), actor);
+    }
+
+    @Transactional
+    public AdminUserDto.Response updateMember(Long cabinetId, Long id, AdminUserDto.MemberUpdateRequest request) {
+        LoginUser user = findMember(cabinetId, id);
+        String username = username(request.username());
+        if (!username.equalsIgnoreCase(user.getUsername()) && userRepository.existsByUsernameIgnoreCase(username)) {
+            throw new BusinessRuleException("Username \"" + username + "\" is already taken.");
+        }
+        String role = role(request.role(), MEMBER_ROLES);
+        if (!role.equals(user.getRole())) assertCanLeaveCabinet(user);
+        user.setUsername(username);
+        user.setFullName(fullName(request.fullName()));
+        user.setRole(role);
+        user.setActive(request.active() == null ? Boolean.TRUE.equals(user.getActive()) : request.active());
+        LoginUser saved = userRepository.saveAndFlush(user);
+        seedDefaultWorkingHours(saved);
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public InvitationDto.Created inviteMember(Long cabinetId, Long id, ClinicPrincipal actor) {
+        return invitationService.create(findMember(cabinetId, id), actor.userId());
+    }
+
+    // ------------------------------------------------------------- used by the cabinet service
+
+    /**
+     * Makes {@code username} the single active manager of the cabinet; a previous manager is
+     * deactivated. Returns the new account with its invitation link.
+     */
+    @Transactional
+    public AdminUserDto.Created replaceManager(Long cabinetId, String username, String fullName,
+            ClinicPrincipal actor) {
+        requireCabinet(cabinetId);
+        userRepository.findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(cabinetId, "manager").forEach(previous -> {
+            previous.setActive(false);
+            userRepository.save(previous);
+        });
+        userRepository.flush();
+        return created(createUser(username, fullName, "manager", cabinetId), actor);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminUserDto.Response activeManagerOf(Long cabinetId) {
+        return userRepository.findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(cabinetId, "manager").stream()
+                .findFirst().map(this::toResponse).orElse(null);
+    }
+
+    private LoginUser createUser(String rawUsername, String rawFullName, String role, Long cabinetId) {
+        String username = username(rawUsername);
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
+            throw new BusinessRuleException("Username \"" + username + "\" is already taken.");
+        }
+        LoginUser user = new LoginUser();
+        user.setUsername(username);
+        user.setFullName(fullName(rawFullName));
+        user.setRole(role);
+        user.setCabinetId(cabinetId);
+        user.setActive(true);
+        // The owner chooses the real password through the invitation link; until then nobody
+        // (including the admin or manager who created the account) knows a working password.
+        user.setPassword(UUID.randomUUID() + UUID.randomUUID().toString());
+        assertSingleManager(user, role, true, cabinetId);
+        LoginUser saved = userRepository.saveAndFlush(user);
+        seedDefaultWorkingHours(saved);
+        return saved;
+    }
+
+    private AdminUserDto.Created created(LoginUser user, ClinicPrincipal actor) {
+        return new AdminUserDto.Created(toResponse(user), invitationService.create(user, actor.userId()));
+    }
+
+    private void assertSingleManager(LoginUser user, String role, boolean active, Long cabinetId) {
+        if (!"manager".equals(role) || !active) return;
+        boolean alreadyThisManager = user.getId() != null && "manager".equals(user.getRole()) && Boolean.TRUE.equals(user.getActive())
+                && Objects.equals(cabinetId, user.getCabinetId());
+        if (!alreadyThisManager
+                && userRepository.countByCabinetIdAndRoleIgnoreCaseAndActiveTrue(cabinetId, "manager") > 0) {
+            throw new BusinessRuleException(
+                    "This cabinet already has an active manager. Replace it from the cabinet page.");
+        }
+    }
+
+    private LoginUser findMember(Long cabinetId, Long id) {
+        return userRepository.findById(id)
+                .filter(user -> Objects.equals(cabinetId, user.getCabinetId()))
+                .filter(user -> MEMBER_ROLES.contains(user.getRole()))
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+    }
+
+    private void requireActiveCabinet(Long cabinetId) {
+        if (!Boolean.TRUE.equals(requireCabinet(cabinetId).getActive())) {
+            throw new BusinessRuleException("This cabinet is disabled.");
+        }
+    }
+
+    private Map<Long, String> cabinetNames() {
+        Map<Long, String> names = new HashMap<>();
+        cabinetRepository.findAll().forEach(cabinet -> names.put(cabinet.getId(), cabinet.getName()));
+        return names;
     }
 
     private LoginUser find(Long id) {
@@ -120,7 +234,8 @@ public class UserAdminService {
     private AdminUserDto.Response toResponse(LoginUser user, Map<Long, String> cabinetNames) {
         return new AdminUserDto.Response(user.getId(), user.getUsername(), user.getFullName(), user.getRole(),
                 Boolean.TRUE.equals(user.getActive()), user.getCreatedAt(), user.getUpdatedAt(),
-                user.getCabinetId(), user.getCabinetId() == null ? null : cabinetNames.get(user.getCabinetId()));
+                user.getCabinetId(), user.getCabinetId() == null ? null : cabinetNames.get(user.getCabinetId()),
+                invitationService.hasOpenInvitation(user.getId()));
     }
 
     /** A new doctor can receive appointments right away: Mon-Thu 08-17, Fri 08-15, weekend off. */
@@ -147,7 +262,7 @@ public class UserAdminService {
             if (cabinetId != null) throw new IllegalArgumentException("An admin does not belong to a cabinet.");
             return null;
         }
-        if (cabinetId == null) throw new IllegalArgumentException("A cabinet is required for doctors and secretaries.");
+        if (cabinetId == null) throw new IllegalArgumentException("A cabinet is required for this role.");
         return requireCabinet(cabinetId).getId();
     }
 
@@ -188,18 +303,11 @@ public class UserAdminService {
         return fullName;
     }
 
-    private String role(String value) {
+    private String role(String value, Set<String> allowed) {
         String role = value == null ? "" : value.trim().toLowerCase();
-        if (!ROLES.contains(role)) {
-            throw new IllegalArgumentException("Role must be doctor, secretaire or admin.");
+        if (!allowed.contains(role)) {
+            throw new IllegalArgumentException("Role must be one of: " + String.join(", ", new java.util.TreeSet<>(allowed)) + ".");
         }
         return role;
-    }
-
-    private String password(String value) {
-        if (value == null || value.length() < MIN_PASSWORD_LENGTH || value.length() > 255) {
-            throw new IllegalArgumentException("Password must be at least " + MIN_PASSWORD_LENGTH + " characters.");
-        }
-        return value;
     }
 }

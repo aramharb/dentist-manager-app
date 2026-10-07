@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.demo.dto.AdminUserDto;
 import com.example.demo.dto.CabinetDto;
 import com.example.demo.security.ClinicPrincipal;
 import com.example.demo.service.CabinetAdminService;
@@ -37,11 +38,10 @@ public class AdminCabinetController {
     }
 
     @PostMapping
-    public ResponseEntity<CabinetDto.Response> create(@Valid @RequestBody CabinetDto.Request request,
+    public ResponseEntity<CabinetDto.Created> create(@Valid @RequestBody CabinetDto.Request request,
             Principal principal) {
-        requireAdmin(principal);
-        CabinetDto.Response response = cabinetService.create(request);
-        return ResponseEntity.created(URI.create("/api/admin/cabinets/" + response.id())).body(response);
+        CabinetDto.Created response = cabinetService.create(request, requireAdmin(principal));
+        return ResponseEntity.created(URI.create("/api/admin/cabinets/" + response.cabinet().id())).body(response);
     }
 
     @PutMapping("/{id}")
@@ -51,6 +51,12 @@ public class AdminCabinetController {
         return cabinetService.update(id, request);
     }
 
+    @PutMapping("/{id}/manager")
+    public AdminUserDto.Created replaceManager(@PathVariable Long id,
+            @Valid @RequestBody CabinetDto.ManagerRequest request, Principal principal) {
+        return cabinetService.replaceManager(id, request, requireAdmin(principal));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id, Principal principal) {
         requireAdmin(principal);
@@ -58,9 +64,11 @@ public class AdminCabinetController {
         return ResponseEntity.noContent().build();
     }
 
-    private void requireAdmin(Principal principal) {
-        if (!ClinicPrincipal.require(principal).hasRole("admin")) {
+    private ClinicPrincipal requireAdmin(Principal principal) {
+        ClinicPrincipal actor = ClinicPrincipal.require(principal);
+        if (!actor.hasRole("admin")) {
             throw new MessagingAccessDeniedException("Only an admin can manage cabinets.");
         }
+        return actor;
     }
 }

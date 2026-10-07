@@ -1,0 +1,136 @@
+<div class="admin-shell">
+  <header class="admin-topbar">
+    <div class="brand">
+      <span class="logo">DC</span>
+      <div>
+        <p class="eyebrow">{{ currentUser?.cabinetName || 'Cabinet' }}</p>
+        <h1>Team accounts</h1>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <app-language-switcher />
+      <div class="profile" *ngIf="currentUser">
+        <span class="avatar">{{ initials(currentUser.fullName) }}</span>
+        <div>
+          <strong>{{ currentUser.fullName }}</strong>
+          <small>Cabinet manager</small>
+        </div>
+      </div>
+      <button class="chip-button" type="button" (click)="logout()">Log out</button>
+    </div>
+  </header>
+
+  <main class="admin-content">
+    <section class="stat-strip" aria-label="Team summary">
+      <article><small>Accounts</small><strong>{{ stats().total }}</strong></article>
+      <article><small>Doctors</small><strong>{{ stats().doctors }}</strong></article>
+      <article><small>Secretaries</small><strong>{{ stats().secretaries }}</strong></article>
+      <article><small>Waiting for first sign-in</small><strong>{{ stats().invited }}</strong></article>
+    </section>
+
+    <section class="card">
+      <div class="card-toolbar">
+        <input
+          class="search"
+          type="search"
+          placeholder="Search by name, username or role"
+          aria-label="Search accounts"
+          [ngModel]="filter()"
+          (ngModelChange)="filter.set($event)"
+        />
+        <label class="check">
+          <input type="checkbox" [ngModel]="showInactive()" (ngModelChange)="showInactive.set($event)" />
+          Show inactive
+        </label>
+        <button class="primary-button" type="button" (click)="openCreate()">+ New account</button>
+      </div>
+
+      <p class="empty" *ngIf="loading()">Loading accounts…</p>
+      <p class="empty" *ngIf="!loading() && !visibleAccounts().length">
+        No accounts yet. Create the doctors and secretaries of your cabinet.
+      </p>
+
+      <div class="table-wrap" *ngIf="!loading() && visibleAccounts().length">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th class="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of visibleAccounts()" [class.inactive]="!user.active">
+              <td>
+                <div class="person">
+                  <span class="avatar small">{{ initials(user.fullName) }}</span>
+                  <strong>{{ user.fullName }}</strong>
+                </div>
+              </td>
+              <td class="mono">{{ user.username }}</td>
+              <td><span class="role-badge" [attr.data-role]="user.role">{{ roleLabels[user.role] }}</span></td>
+              <td>
+                <span class="status" [class.on]="user.active">
+                  {{ !user.active ? 'Inactive' : user.invitationPending ? 'Invited' : 'Active' }}
+                </span>
+              </td>
+              <td class="actions-col">
+                <div class="row-actions">
+                  <button class="ghost-button" type="button" (click)="openEdit(user)">Edit</button>
+                  <button class="ghost-button" type="button" [disabled]="saving() || !user.active" (click)="sendInvitation(user)">
+                    Invitation link
+                  </button>
+                  <button class="ghost-button" type="button" [class.danger]="user.active" [disabled]="saving()" (click)="toggleActive(user)">
+                    {{ user.active ? 'Deactivate' : 'Activate' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <app-modal [open]="!!dialogMode" [title]="dialogTitle" eyebrow="Team account" (dismissed)="closeDialog()">
+    <form class="user-form" (submit)="$event.preventDefault(); submit()">
+      <label>
+        Full name
+        <input name="fullName" [(ngModel)]="form.fullName" autocomplete="off" required />
+      </label>
+      <label>
+        Username
+        <input name="username" [(ngModel)]="form.username" autocomplete="off" required />
+      </label>
+      <label>
+        Role
+        <select name="role" [(ngModel)]="form.role">
+          <option *ngFor="let role of roles" [value]="role[0]">{{ role[1] }}</option>
+        </select>
+      </label>
+      <label class="check" *ngIf="dialogMode === 'edit'">
+        <input type="checkbox" name="active" [(ngModel)]="form.active" />
+        Account is active (can sign in)
+      </label>
+      <p class="hint" *ngIf="dialogMode === 'create'">
+        You will get a one-time link to send to this person so they can choose their own password.
+      </p>
+
+      <p class="form-error" *ngIf="formError" role="alert">{{ formError }}</p>
+
+      <div class="form-actions">
+        <button class="ghost-button" type="button" (click)="closeDialog()" [disabled]="saving()">Cancel</button>
+        <button class="primary-button" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : dialogMode === 'create' ? 'Create account' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-modal [open]="!!invitation" title="Invitation link" eyebrow="One-time link" (dismissed)="closeInvitation()">
+    <app-invitation-link [invitation]="invitation" />
+    <div class="form-actions" style="margin-top: 16px; display: flex; justify-content: flex-end"><button class="primary-button" type="button" (click)="closeInvitation()">Done</button></div>
+  </app-modal>
+</div>

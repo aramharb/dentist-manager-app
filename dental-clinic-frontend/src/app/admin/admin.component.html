@@ -61,6 +61,14 @@
               <span class="status" [class.on]="cabinet.active">{{ cabinet.active ? 'Active' : 'Disabled' }}</span>
             </header>
             <p class="muted" *ngIf="contactLine(cabinet) as contact">{{ contact }}</p>
+            <p class="manager-line">
+              <span>Manager</span>
+              <strong *ngIf="cabinet.manager as manager; else noManager">
+                {{ manager.fullName }} <small class="mono">{{ manager.username }}</small>
+                <em class="pending" *ngIf="manager.invitationPending">invited</em>
+              </strong>
+              <ng-template #noManager><strong class="warn">No manager</strong></ng-template>
+            </p>
             <dl class="cabinet-stats">
               <div><dt>Doctors</dt><dd>{{ cabinet.stats.doctors }}</dd></div>
               <div><dt>Secretaries</dt><dd>{{ cabinet.stats.secretaries }}</dd></div>
@@ -70,6 +78,9 @@
             <div class="row-actions">
               <button class="ghost-button" type="button" (click)="showAccounts(cabinet.id)">Members</button>
               <button class="ghost-button" type="button" (click)="openCabinetEdit(cabinet)">Edit</button>
+              <button class="ghost-button" type="button" [disabled]="saving()" (click)="openReplaceManager(cabinet)">
+                {{ cabinet.manager ? 'Replace manager' : 'Set manager' }}
+              </button>
               <button
                 class="ghost-button"
                 type="button"
@@ -163,7 +174,9 @@
               <td class="actions-col">
                 <div class="row-actions">
                   <button class="ghost-button" type="button" (click)="openEdit(user)">Edit</button>
-                  <button class="ghost-button" type="button" (click)="openPassword(user)">Password</button>
+                  <button class="ghost-button" type="button" [disabled]="saving() || !user.active" (click)="sendInvitation(user)">
+                    Invitation link
+                  </button>
                   <button
                     class="ghost-button"
                     type="button"
@@ -218,9 +231,35 @@
           <input type="checkbox" name="cabinetActive" [(ngModel)]="cabinetForm.active" />
           Cabinet is active (its members can sign in)
         </label>
+        <fieldset class="manager-fields" *ngIf="dialogMode === 'cabinet-create'">
+          <legend>Cabinet manager</legend>
+          <label>
+            Manager full name
+            <input name="newManagerName" [(ngModel)]="cabinetForm.managerFullName" autocomplete="off" required />
+          </label>
+          <label>
+            Manager username
+            <input name="newManagerUsername" [(ngModel)]="cabinetForm.managerUsername" autocomplete="off" required />
+          </label>
+          <p class="hint">The manager creates this cabinet's doctors and secretaries. You will get a one-time link for them.</p>
+        </fieldset>
       </ng-container>
 
-      <ng-container *ngIf="!isCabinetDialog && dialogMode !== 'password'">
+      <ng-container *ngIf="dialogMode === 'manager'">
+        <p class="hint" *ngIf="selectedCabinet?.manager as current">
+          {{ current.fullName }} will be deactivated. A cabinet has exactly one manager.
+        </p>
+        <label>
+          Manager full name
+          <input name="managerName" [(ngModel)]="cabinetForm.managerFullName" autocomplete="off" required />
+        </label>
+        <label>
+          Manager username
+          <input name="managerUsername" [(ngModel)]="cabinetForm.managerUsername" autocomplete="off" required />
+        </label>
+      </ng-container>
+
+      <ng-container *ngIf="!isCabinetDialog && dialogMode !== 'manager'">
         <label>
           Full name
           <input name="fullName" [(ngModel)]="form.fullName" autocomplete="off" required />
@@ -250,25 +289,23 @@
         </label>
       </ng-container>
 
-      <ng-container *ngIf="dialogMode === 'create' || dialogMode === 'password'">
-        <label>
-          {{ dialogMode === 'password' ? 'New password' : 'Password' }}
-          <input type="password" name="password" [(ngModel)]="form.password" autocomplete="new-password" required />
-        </label>
-        <label>
-          Confirm password
-          <input type="password" name="confirmPassword" [(ngModel)]="form.confirmPassword" autocomplete="new-password" required />
-        </label>
-      </ng-container>
+      <p class="hint" *ngIf="dialogMode === 'create'">
+        You will get a one-time link to send to this person so they can choose their own password.
+      </p>
 
       <p class="form-error" *ngIf="formError" role="alert">{{ formError }}</p>
 
       <div class="form-actions">
         <button class="ghost-button" type="button" (click)="closeDialog()" [disabled]="saving()">Cancel</button>
         <button class="primary-button" type="submit" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : dialogMode === 'create' ? 'Create account' : dialogMode === 'cabinet-create' ? 'Create cabinet' : 'Save' }}
+          {{ saving() ? 'Saving…' : dialogMode === 'create' ? 'Create account' : dialogMode === 'cabinet-create' ? 'Create cabinet' : dialogMode === 'manager' ? 'Appoint manager' : 'Save' }}
         </button>
       </div>
     </form>
+  </app-modal>
+
+  <app-modal [open]="!!invitation" title="Invitation link" eyebrow="One-time link" (dismissed)="closeInvitation()">
+    <app-invitation-link [invitation]="invitation" />
+    <div class="form-actions" style="margin-top: 16px; display: flex; justify-content: flex-end"><button class="primary-button" type="button" (click)="closeInvitation()">Done</button></div>
   </app-modal>
 </div>
