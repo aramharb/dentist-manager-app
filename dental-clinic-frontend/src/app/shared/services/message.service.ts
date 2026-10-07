@@ -164,9 +164,12 @@ export class MessageService {
         client.subscribe('/user/queue/messages', (frame) => {
           this.incomingMessages.next(JSON.parse(frame.body) as ChatMessage);
         });
-        client.subscribe('/topic/presence', (frame) => {
-          this.presenceUpdates.next(JSON.parse(frame.body) as PresenceUpdate);
-        });
+        const cabinetId = this.session.currentUser?.cabinetId;
+        if (cabinetId != null) {
+          client.subscribe(`/topic/presence/${cabinetId}`, (frame) => {
+            this.presenceUpdates.next(JSON.parse(frame.body) as PresenceUpdate);
+          });
+        }
         client.subscribe('/user/queue/schedule', (frame) => {
           this.incomingScheduleEvents.next(JSON.parse(frame.body) as ScheduleEvent);
         });

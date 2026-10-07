@@ -236,6 +236,9 @@ public class MessageService {
         if (!MESSAGING_ROLES.contains(senderRole) || !MESSAGING_ROLES.contains(recipientRole)) {
             throw new MessagingAccessDeniedException("Messaging is not allowed for this user role.");
         }
+        if (!java.util.Objects.equals(sender.getCabinetId(), recipient.getCabinetId())) {
+            throw new MessagingAccessDeniedException("You can only message members of your own cabinet.");
+        }
     }
 
     private String normalizeRole(String role) {

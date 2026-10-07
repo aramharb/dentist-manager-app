@@ -395,3 +395,13 @@ Frontend:
 - `dental-clinic-frontend/src/app/secretaire/`
 - `dental-clinic-frontend/src/app/doctor/`
 - `dental-clinic-frontend/src/app/shared/`
+
+## Multi-Cabinet Architecture
+
+The app serves many cabinets (clinics). A cabinet is a closed group of doctors and secretaries; the single platform `admin` (no cabinet) manages all cabinets and their members.
+
+- **Schema (`V20__create_cabinets.sql`)**: table `cabinet`; `login.cabinet_id` (required for doctor/secretaire, NULL for admin, enforced by a check constraint); `cabinet_id NOT NULL` on `patient`, `appointment`, `expense`, `material_inventory`, `procedure_catalog`, `treatment`, `treatment_procedure`, `treatment_history`, `treatment_photo`, `prescription`, `staff_action`, `conversation`. Existing data was moved into the cabinet `MAIN`. `patient_number` and procedure `code` are unique per cabinet. Composite foreign keys (`(id, cabinet_id)`) stop rows from different cabinets being linked even by buggy code. `tooth` and `treatment_type` stay global reference data.
+- **Isolation**: entities of those tables extend `CabinetOwned` (Hibernate `@TenantId`). `MessagingJwtFilter` stores the caller's cabinet in `CabinetContext` (cleared after the request); `CabinetTenantResolver` hands it to Hibernate, which adds it to every query/lookup and fills it on insert. Without a cabinet the resolver answers `0`, so tenant data is invisible and unwritable (fail closed). Native SQL bypasses this: `ExpenseRepository.restoreDeleted` sets `cabinet_id` explicitly and `CabinetAdminService` uses `JdbcTemplate` for cross-cabinet statistics.
+- **People**: `LoginUser.cabinetId`; doctor/secretary lookups (assigned doctor, appointment provider, treatment doctor, working hours) must be in the caller's cabinet; messaging is only allowed inside one cabinet; `/api/users` lists only the caller's cabinet; realtime notifiers target only the cabinet's users; presence is published on `/topic/presence/{cabinetId}` and a client can subscribe only to its own. Users of a disabled cabinet cannot log in and existing tokens stop working.
+- **Admin API**: `/api/admin/cabinets` (list with stats, create — optionally copying a catalog —, update/disable, delete only when empty) and `/api/admin/users?cabinetId=` plus `cabinetId` on create/update. A user that already owns cabinet data cannot be moved to another cabinet. New doctors get default working hours.
+- **Within a cabinet** the existing rules are unchanged (a doctor sees the patients assigned to them, a secretary sees all of the cabinet's patients).

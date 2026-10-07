@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.tenant.CabinetContext;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -274,7 +275,8 @@ public class PatientService {
 
     private LoginUser requireDoctor(Long doctorUserId) {
         return userRepository.findById(doctorUserId)
-                .filter(user -> Boolean.TRUE.equals(user.getActive()) && "doctor".equalsIgnoreCase(user.getRole()))
+                .filter(user -> Boolean.TRUE.equals(user.getActive()) && "doctor".equalsIgnoreCase(user.getRole())
+                        && CabinetContext.isCurrent(user.getCabinetId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Active doctor", doctorUserId));
     }
 

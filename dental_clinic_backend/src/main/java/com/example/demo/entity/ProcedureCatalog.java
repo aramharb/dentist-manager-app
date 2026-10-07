@@ -8,7 +8,7 @@ import jakarta.validation.constraints.*;
 
 @Entity
 @Table(name = "procedure_catalog")
-public class ProcedureCatalog {
+public class ProcedureCatalog extends CabinetOwned {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @NotBlank @Column(nullable = false, unique = true, length = 40)

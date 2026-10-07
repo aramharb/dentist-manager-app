@@ -18,6 +18,8 @@ public class LoginUser {
     private String role;
     @NotBlank @Column(nullable = false, length = 255)
     private String password;
+    @Column(name = "cabinet_id")
+    private Long cabinetId;
     @Column(nullable = false)
     private Boolean active = true;
     @Column(nullable = false)
@@ -36,6 +38,9 @@ public class LoginUser {
     public void setRole(String role) { this.role = role; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+    /** Cabinet the user belongs to; {@code null} only for the platform admin. */
+    public Long getCabinetId() { return cabinetId; }
+    public void setCabinetId(Long cabinetId) { this.cabinetId = cabinetId; }
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
     public LocalDateTime getCreatedAt() { return createdAt; }

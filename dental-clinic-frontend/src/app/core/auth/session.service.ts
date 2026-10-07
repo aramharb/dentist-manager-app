@@ -28,6 +28,9 @@ export interface SessionUser {
   role: UserRole;
   active: boolean;
   permissions: string[];
+  /** Cabinet (clinic group) of the user; absent for the platform admin. */
+  cabinetId?: number | null;
+  cabinetName?: string | null;
 }
 
 export interface SessionState {

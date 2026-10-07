@@ -8,5 +8,7 @@ public record SessionUserDto(
         String fullName,
         String role,
         boolean active,
-        List<String> permissions) {
+        List<String> permissions,
+        Long cabinetId,
+        String cabinetName) {
 }

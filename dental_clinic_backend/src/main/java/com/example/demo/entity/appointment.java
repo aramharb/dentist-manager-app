@@ -17,7 +17,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "appointment")
-public class appointment {
+public class appointment extends CabinetOwned {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

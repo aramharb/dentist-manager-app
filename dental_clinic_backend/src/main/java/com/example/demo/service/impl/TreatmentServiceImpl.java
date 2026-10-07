@@ -1,5 +1,6 @@
 package com.example.demo.service.impl;
 
+import com.example.demo.tenant.CabinetContext;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -414,7 +415,8 @@ public class TreatmentServiceImpl implements TreatmentService {
 
     private LoginUser requireActiveDoctor(Long id) {
         return userRepository.findById(id)
-                .filter(user -> Boolean.TRUE.equals(user.getActive()) && "doctor".equalsIgnoreCase(user.getRole()))
+                .filter(user -> Boolean.TRUE.equals(user.getActive()) && "doctor".equalsIgnoreCase(user.getRole())
+                        && CabinetContext.isCurrent(user.getCabinetId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Active doctor", id));
     }
 

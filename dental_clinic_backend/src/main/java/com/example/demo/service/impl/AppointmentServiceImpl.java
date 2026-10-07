@@ -1,5 +1,6 @@
 package com.example.demo.service.impl;
 
+import com.example.demo.tenant.CabinetContext;
 import com.example.demo.dto.AppointmentRequest;
 import com.example.demo.dto.AppointmentResponse;
 import com.example.demo.entity.AppointmentPriority;
@@ -194,7 +195,8 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalArgumentException("An active doctor must be selected.");
         }
         return userRepository.findByIdForUpdate(providerId)
-                .filter(user -> Boolean.TRUE.equals(user.getActive()) && "doctor".equalsIgnoreCase(user.getRole()))
+                .filter(user -> Boolean.TRUE.equals(user.getActive()) && "doctor".equalsIgnoreCase(user.getRole())
+                        && CabinetContext.isCurrent(user.getCabinetId()))
                 .orElseThrow(() -> new IllegalArgumentException("An active doctor must be selected."));
     }
 

@@ -113,6 +113,16 @@ class MessageServiceTests {
         verify(messageRepository, never()).save(any(ChatMessage.class));
     }
 
+    @Test
+    void membersOfAnotherCabinetCannotExchangeMessages() {
+        doctor.setCabinetId(1L);
+        secretary.setCabinetId(2L);
+
+        assertThrows(MessagingAccessDeniedException.class, () -> messageService.send(10L, 1L, "Hello"));
+
+        verify(messageRepository, never()).save(any(ChatMessage.class));
+    }
+
     private LoginUser user(Long id, String role, String fullName) {
         LoginUser user = new LoginUser();
         setId(user, id);

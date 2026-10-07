@@ -19,11 +19,15 @@ public interface LoginUserRepository extends JpaRepository<LoginUser, Long> {
     @Query("select u from LoginUser u where u.id = :id")
     Optional<LoginUser> findByIdForUpdate(@Param("id") Long id);
     Optional<LoginUser> findByUsernameIgnoreCaseAndActiveTrue(String username);
-    List<LoginUser> findByActiveTrueOrderByRoleAscFullNameAsc();
+    List<LoginUser> findByCabinetIdAndActiveTrueOrderByRoleAscFullNameAsc(Long cabinetId);
     List<LoginUser> findAllByOrderByRoleAscFullNameAsc();
+    List<LoginUser> findByCabinetIdOrderByRoleAscFullNameAsc(Long cabinetId);
     boolean existsByUsernameIgnoreCase(String username);
     long countByRoleIgnoreCaseAndActiveTrue(String role);
-    List<LoginUser> findByRoleIgnoreCaseAndActiveTrue(String role);
-    Optional<LoginUser> findFirstByFullNameIgnoreCaseAndRoleIgnoreCaseAndActiveTrue(String fullName, String role);
-    Optional<LoginUser> findFirstByUsernameIgnoreCaseAndRoleIgnoreCaseAndActiveTrue(String username, String role);
+    List<LoginUser> findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(Long cabinetId, String role);
+    long countByCabinetId(Long cabinetId);
+    long countByCabinetIdAndRoleIgnoreCaseAndActiveTrue(Long cabinetId, String role);
+
+    @Query("select count(c) > 0 from Cabinet c where c.id = :cabinetId and c.active = true")
+    boolean isCabinetActive(@Param("cabinetId") Long cabinetId);
 }

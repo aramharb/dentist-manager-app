@@ -4,7 +4,7 @@
       <span class="logo">DC</span>
       <div>
         <p class="eyebrow">Administration</p>
-        <h1>Staff accounts</h1>
+        <h1>Cabinets &amp; staff</h1>
       </div>
     </div>
     <div class="topbar-actions">
@@ -21,6 +21,80 @@
   </header>
 
   <main class="admin-content">
+    <nav class="tabs" aria-label="Administration sections">
+      <button type="button" [class.active]="view() === 'cabinets'" (click)="showCabinets()">
+        Cabinets <span class="count">{{ cabinetTotals().total }}</span>
+      </button>
+      <button type="button" [class.active]="view() === 'accounts'" (click)="showAccounts(cabinetFilter())">
+        Accounts <span class="count">{{ stats().total }}</span>
+      </button>
+    </nav>
+
+    <ng-container *ngIf="view() === 'cabinets'">
+      <section class="stat-strip" aria-label="Cabinet summary">
+        <article><small>Cabinets</small><strong>{{ cabinetTotals().total }}</strong></article>
+        <article><small>Active cabinets</small><strong>{{ cabinetTotals().active }}</strong></article>
+        <article><small>Doctors</small><strong>{{ cabinetTotals().doctors }}</strong></article>
+        <article><small>Secretaries</small><strong>{{ cabinetTotals().secretaries }}</strong></article>
+        <article><small>Patients</small><strong>{{ cabinetTotals().patients }}</strong></article>
+      </section>
+
+      <section class="card">
+        <div class="card-toolbar">
+          <p class="hint">
+            Each cabinet is a closed group: its doctors and secretaries share their own patients, agenda,
+            finances, stock and messages, and see nothing from other cabinets.
+          </p>
+          <button class="primary-button" type="button" (click)="openCabinetCreate()">+ New cabinet</button>
+        </div>
+
+        <p class="empty" *ngIf="loading()">Loading cabinets…</p>
+        <p class="empty" *ngIf="!loading() && !cabinets().length">No cabinet yet. Create the first one.</p>
+
+        <div class="cabinet-grid" *ngIf="cabinets().length">
+          <article class="cabinet-card" *ngFor="let cabinet of cabinets()" [class.inactive]="!cabinet.active">
+            <header>
+              <div>
+                <h2>{{ cabinet.name }}</h2>
+                <small class="mono">{{ cabinet.code }}</small>
+              </div>
+              <span class="status" [class.on]="cabinet.active">{{ cabinet.active ? 'Active' : 'Disabled' }}</span>
+            </header>
+            <p class="muted" *ngIf="contactLine(cabinet) as contact">{{ contact }}</p>
+            <dl class="cabinet-stats">
+              <div><dt>Doctors</dt><dd>{{ cabinet.stats.doctors }}</dd></div>
+              <div><dt>Secretaries</dt><dd>{{ cabinet.stats.secretaries }}</dd></div>
+              <div><dt>Patients</dt><dd>{{ cabinet.stats.patients }}</dd></div>
+              <div><dt>Appointments</dt><dd>{{ cabinet.stats.appointments }}</dd></div>
+            </dl>
+            <div class="row-actions">
+              <button class="ghost-button" type="button" (click)="showAccounts(cabinet.id)">Members</button>
+              <button class="ghost-button" type="button" (click)="openCabinetEdit(cabinet)">Edit</button>
+              <button
+                class="ghost-button"
+                type="button"
+                [class.danger]="cabinet.active"
+                [disabled]="saving()"
+                (click)="toggleCabinetActive(cabinet)"
+              >
+                {{ cabinet.active ? 'Disable' : 'Enable' }}
+              </button>
+              <button
+                class="ghost-button danger"
+                type="button"
+                *ngIf="isCabinetEmpty(cabinet)"
+                [disabled]="saving()"
+                (click)="deleteCabinet(cabinet)"
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </ng-container>
+
+    <ng-container *ngIf="view() === 'accounts'">
     <section class="stat-strip" aria-label="Account summary">
       <article><small>Accounts</small><strong>{{ stats().total }}</strong></article>
       <article><small>Active</small><strong>{{ stats().active }}</strong></article>
@@ -38,6 +112,15 @@
           [ngModel]="filter()"
           (ngModelChange)="filter.set($event)"
         />
+        <select
+          class="cabinet-filter"
+          aria-label="Filter by cabinet"
+          [ngModel]="cabinetFilter()"
+          (ngModelChange)="cabinetFilter.set($event)"
+        >
+          <option [ngValue]="null">All cabinets</option>
+          <option *ngFor="let cabinet of cabinets()" [ngValue]="cabinet.id">{{ cabinet.name }}</option>
+        </select>
         <label class="check">
           <input type="checkbox" [ngModel]="showInactive()" (ngModelChange)="showInactive.set($event)" />
           Show inactive
@@ -55,6 +138,7 @@
               <th>Name</th>
               <th>Username</th>
               <th>Role</th>
+              <th>Cabinet</th>
               <th>Status</th>
               <th>Last updated</th>
               <th class="actions-col">Actions</th>
@@ -71,6 +155,7 @@
               </td>
               <td class="mono">{{ user.username }}</td>
               <td><span class="role-badge" [attr.data-role]="user.role">{{ roleLabels[user.role] }}</span></td>
+              <td>{{ user.cabinetName ?? '—' }}</td>
               <td>
                 <span class="status" [class.on]="user.active">{{ user.active ? 'Active' : 'Inactive' }}</span>
               </td>
@@ -96,11 +181,46 @@
         </table>
       </div>
     </section>
+    </ng-container>
   </main>
 
-  <app-modal [open]="!!dialogMode" [title]="dialogTitle" eyebrow="Staff account" (dismissed)="closeDialog()">
+  <app-modal [open]="!!dialogMode" [title]="dialogTitle" [eyebrow]="isCabinetDialog ? 'Cabinet' : 'Staff account'" (dismissed)="closeDialog()">
     <form class="user-form" (submit)="$event.preventDefault(); submit()">
-      <ng-container *ngIf="dialogMode !== 'password'">
+      <ng-container *ngIf="isCabinetDialog">
+        <label>
+          Cabinet name
+          <input name="cabinetName" [(ngModel)]="cabinetForm.name" autocomplete="off" required />
+        </label>
+        <label>
+          Code
+          <input name="cabinetCode" [(ngModel)]="cabinetForm.code" autocomplete="off" required />
+        </label>
+        <label>
+          Address
+          <input name="cabinetAddress" [(ngModel)]="cabinetForm.address" autocomplete="off" />
+        </label>
+        <label>
+          Phone
+          <input name="cabinetPhone" [(ngModel)]="cabinetForm.phoneNumber" autocomplete="off" />
+        </label>
+        <label>
+          Email
+          <input name="cabinetEmail" type="email" [(ngModel)]="cabinetForm.email" autocomplete="off" />
+        </label>
+        <label *ngIf="dialogMode === 'cabinet-create' && cabinets().length">
+          Start with the treatment catalog of
+          <select name="copyCatalog" [(ngModel)]="cabinetForm.copyCatalogFromCabinetId">
+            <option [ngValue]="null">An empty catalog</option>
+            <option *ngFor="let cabinet of cabinets()" [ngValue]="cabinet.id">{{ cabinet.name }}</option>
+          </select>
+        </label>
+        <label class="check">
+          <input type="checkbox" name="cabinetActive" [(ngModel)]="cabinetForm.active" />
+          Cabinet is active (its members can sign in)
+        </label>
+      </ng-container>
+
+      <ng-container *ngIf="!isCabinetDialog && dialogMode !== 'password'">
         <label>
           Full name
           <input name="fullName" [(ngModel)]="form.fullName" autocomplete="off" required />
@@ -115,13 +235,22 @@
             <option *ngFor="let role of roles" [value]="role[0]">{{ role[1] }}</option>
           </select>
         </label>
+        <label *ngIf="form.role !== 'admin'">
+          Cabinet
+          <select name="cabinetId" [(ngModel)]="form.cabinetId">
+            <option [ngValue]="null" disabled>Select a cabinet</option>
+            <option *ngFor="let cabinet of cabinets()" [ngValue]="cabinet.id" [disabled]="!cabinet.active && cabinet.id !== form.cabinetId">
+              {{ cabinet.name }}{{ cabinet.active ? '' : ' (disabled)' }}
+            </option>
+          </select>
+        </label>
         <label class="check" *ngIf="dialogMode === 'edit'">
           <input type="checkbox" name="active" [(ngModel)]="form.active" [disabled]="!!selected && isSelf(selected)" />
           Account is active (can sign in)
         </label>
       </ng-container>
 
-      <ng-container *ngIf="dialogMode !== 'edit'">
+      <ng-container *ngIf="dialogMode === 'create' || dialogMode === 'password'">
         <label>
           {{ dialogMode === 'password' ? 'New password' : 'Password' }}
           <input type="password" name="password" [(ngModel)]="form.password" autocomplete="new-password" required />
@@ -137,7 +266,7 @@
       <div class="form-actions">
         <button class="ghost-button" type="button" (click)="closeDialog()" [disabled]="saving()">Cancel</button>
         <button class="primary-button" type="submit" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : dialogMode === 'create' ? 'Create account' : 'Save' }}
+          {{ saving() ? 'Saving…' : dialogMode === 'create' ? 'Create account' : dialogMode === 'cabinet-create' ? 'Create cabinet' : 'Save' }}
         </button>
       </div>
     </form>

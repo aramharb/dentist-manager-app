@@ -12,6 +12,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import com.example.demo.entity.Treatment;
 import com.example.demo.repository.LoginUserRepository;
 
+import com.example.demo.tenant.CabinetContext;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
@@ -42,17 +43,20 @@ public class TreatmentRealtimeNotifier {
     }
 
     private void sendAfterCommit(TreatmentEvent event, Long doctorId, boolean allDoctors) {
+        Long cabinetId = CabinetContext.current();
         Runnable notification = () -> {
+            if (cabinetId == null) return;
             String payload = objectMapper.writeValueAsString(event);
             Set<String> recipients = new LinkedHashSet<>();
             if (allDoctors) {
-                userRepository.findByRoleIgnoreCaseAndActiveTrue("doctor")
+                userRepository.findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(cabinetId, "doctor")
                         .forEach(user -> recipients.add(user.getUsername()));
             } else if (doctorId != null) {
                 userRepository.findById(doctorId).filter(user -> Boolean.TRUE.equals(user.getActive()))
+                        .filter(user -> cabinetId.equals(user.getCabinetId()))
                         .ifPresent(user -> recipients.add(user.getUsername()));
             }
-            userRepository.findByRoleIgnoreCaseAndActiveTrue("secretaire")
+            userRepository.findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(cabinetId, "secretaire")
                     .forEach(user -> recipients.add(user.getUsername()));
             recipients.forEach(username -> messagingTemplate.convertAndSendToUser(
                     username, "/queue/treatments", payload));

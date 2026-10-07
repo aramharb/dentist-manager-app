@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "staff_action")
-public class StaffAction {
+public class StaffAction extends CabinetOwned {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -23,6 +23,7 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.LoginUserRepository;
 import com.example.demo.repository.StaffActionRepository;
 import com.example.demo.security.ClinicPrincipal;
+import com.example.demo.tenant.CabinetContext;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -328,6 +329,7 @@ public class StaffActionService {
     }
 
     private void sendAfterCommit(StaffActionDto.Response action) {
+        Long cabinetId = CabinetContext.current();
         Runnable notification = () -> {
             String payload = objectMapper.writeValueAsString(action);
             if (APPOINTMENT.equals(action.entityType())) {
@@ -335,12 +337,13 @@ public class StaffActionService {
                 if (providerUserId == null) return;
                 userRepository.findById(providerUserId)
                         .filter(doctor -> Boolean.TRUE.equals(doctor.getActive())
-                                && "doctor".equalsIgnoreCase(doctor.getRole()))
+                                && "doctor".equalsIgnoreCase(doctor.getRole())
+                                && Objects.equals(cabinetId, doctor.getCabinetId()))
                         .ifPresent(doctor -> messagingTemplate.convertAndSendToUser(
                                 doctor.getUsername(), "/queue/activity", payload));
                 return;
             }
-            userRepository.findByRoleIgnoreCaseAndActiveTrue("doctor").forEach(doctor ->
+            userRepository.findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(cabinetId, "doctor").forEach(doctor ->
                     messagingTemplate.convertAndSendToUser(doctor.getUsername(), "/queue/activity", payload));
         };
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {

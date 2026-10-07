@@ -8,7 +8,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "material_inventory")
-public class Material {
+public class Material extends CabinetOwned {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

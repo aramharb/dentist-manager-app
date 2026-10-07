@@ -39,8 +39,8 @@ public class AuthController {
     }
 
     @GetMapping("/users")
-    public List<UserDto.Response> users() {
-        return authService.users();
+    public List<UserDto.Response> users(Principal principal) {
+        return authService.users(ClinicPrincipal.require(principal));
     }
 
     @GetMapping("/auth/me")

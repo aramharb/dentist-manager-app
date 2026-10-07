@@ -46,6 +46,7 @@ class PatientServiceTests {
         userRepository = mock(LoginUserRepository.class);
         appointmentRepository = mock(AppointmentRepository.class);
         doctor = mock(LoginUser.class);
+        when(doctor.getCabinetId()).thenReturn(null);
         when(doctor.getId()).thenReturn(1L);
         when(doctor.getRole()).thenReturn("doctor");
         when(doctor.getActive()).thenReturn(true);

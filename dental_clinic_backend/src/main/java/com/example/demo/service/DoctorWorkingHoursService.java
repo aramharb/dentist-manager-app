@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.tenant.CabinetContext;
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -77,7 +78,8 @@ public class DoctorWorkingHoursService {
 
     private LoginUser requireDoctor(Long doctorId, boolean lock) {
         LoginUser doctor = (lock ? userRepository.findByIdForUpdate(doctorId) : userRepository.findById(doctorId))
-                .filter(user -> Boolean.TRUE.equals(user.getActive()) && "doctor".equalsIgnoreCase(user.getRole()))
+                .filter(user -> Boolean.TRUE.equals(user.getActive()) && "doctor".equalsIgnoreCase(user.getRole())
+                        && CabinetContext.isCurrent(user.getCabinetId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Active doctor", doctorId));
         return doctor;
     }

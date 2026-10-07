@@ -64,7 +64,7 @@ class StaffActionServiceTests {
 
     @Test
     void balanceChangeCreatesClearAuditAndNotifiesDoctor() {
-        when(userRepository.findByRoleIgnoreCaseAndActiveTrue("doctor")).thenReturn(List.of(doctorUser));
+        when(userRepository.findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(null, "doctor")).thenReturn(List.of(doctorUser));
         PatientResponse before = patient(12L, "Ahmed", "Ben Ali", "300.00");
         PatientResponse after = patient(12L, "Ahmed", "Ben Ali", "150.00");
 

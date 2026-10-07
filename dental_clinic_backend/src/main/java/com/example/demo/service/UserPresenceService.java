@@ -12,6 +12,7 @@ import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import com.example.demo.dto.PresenceDto;
+import com.example.demo.security.ClinicPrincipal;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -36,7 +37,7 @@ public class UserPresenceService {
                 normalize(principal.getName()), ignored -> ConcurrentHashMap.newKeySet());
         boolean firstSession = sessions.isEmpty();
         sessions.add(sessionId);
-        if (firstSession) broadcast(principal.getName(), true);
+        if (firstSession) broadcast(principal, true);
     }
 
     @EventListener
@@ -50,7 +51,7 @@ public class UserPresenceService {
 
         sessions.remove(event.getSessionId());
         if (sessions.isEmpty() && sessionsByUsername.remove(username, sessions)) {
-            broadcast(principal.getName(), false);
+            broadcast(principal, false);
         }
     }
 
@@ -59,9 +60,15 @@ public class UserPresenceService {
         return sessions != null && !sessions.isEmpty();
     }
 
-    private void broadcast(String username, boolean online) {
-        String payload = objectMapper.writeValueAsString(new PresenceDto.Update(username, online));
-        messagingTemplate.convertAndSend("/topic/presence", payload);
+    /** Presence is only announced inside the user's own cabinet. */
+    private void broadcast(Principal principal, boolean online) {
+        if (!(principal instanceof ClinicPrincipal clinicPrincipal) || clinicPrincipal.cabinetId() == null) return;
+        String payload = objectMapper.writeValueAsString(new PresenceDto.Update(principal.getName(), online));
+        messagingTemplate.convertAndSend(presenceTopic(clinicPrincipal.cabinetId()), payload);
+    }
+
+    public static String presenceTopic(Long cabinetId) {
+        return "/topic/presence/" + cabinetId;
     }
 
     private String sessionId(Object value) {

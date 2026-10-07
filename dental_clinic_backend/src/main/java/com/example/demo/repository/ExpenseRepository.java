@@ -28,12 +28,12 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 id, recorded_at, updated_at, expense_date, due_date, paid_at, category,
                 billing_period_months, amount, status, label, description, supplier,
                 invoice_number, owner, source_role, entered_by, unexpected, unexpected_note,
-                payment_method, tax_deductible, recurring, attachment_url
+                payment_method, tax_deductible, recurring, attachment_url, cabinet_id
             ) VALUES (
                 :id, :recordedAt, :updatedAt, :expenseDate, :dueDate, :paidAt, :category,
                 :billingPeriodMonths, :amount, :status, :label, :description, :supplier,
                 :invoiceNumber, :owner, :sourceRole, :enteredBy, :unexpected, :unexpectedNote,
-                :paymentMethod, :taxDeductible, :recurring, :attachmentUrl
+                :paymentMethod, :taxDeductible, :recurring, :attachmentUrl, :cabinetId
             )
             """, nativeQuery = true)
     void restoreDeleted(
@@ -59,7 +59,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
             @Param("paymentMethod") String paymentMethod,
             @Param("taxDeductible") boolean taxDeductible,
             @Param("recurring") boolean recurring,
-            @Param("attachmentUrl") String attachmentUrl);
+            @Param("attachmentUrl") String attachmentUrl,
+            @Param("cabinetId") Long cabinetId);
 
     // Get all expenses, newest first
     List<Expense> findAllByOrderByRecordedAtDesc();

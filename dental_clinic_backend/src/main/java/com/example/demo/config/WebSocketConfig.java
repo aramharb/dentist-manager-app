@@ -20,6 +20,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 import com.example.demo.security.AuthenticationException;
 import com.example.demo.security.ClinicPrincipal;
 import com.example.demo.security.JwtTokenService;
+import com.example.demo.service.UserPresenceService;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -56,6 +57,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*");
     }
 
+    private static boolean isOwnPresenceTopic(StompHeaderAccessor accessor) {
+        return accessor.getUser() instanceof ClinicPrincipal principal && principal.cabinetId() != null
+                && UserPresenceService.presenceTopic(principal.cabinetId()).equals(accessor.getDestination());
+    }
+
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {
@@ -75,7 +81,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         && !"/user/queue/staff-actions".equals(accessor.getDestination())
                         && !"/user/queue/schedule".equals(accessor.getDestination())
                         && !"/user/queue/treatments".equals(accessor.getDestination())
-                        && !"/topic/presence".equals(accessor.getDestination())) {
+                        && !isOwnPresenceTopic(accessor)) {
                     throw new AuthenticationException("Subscription is not allowed.");
                 }
                 if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())

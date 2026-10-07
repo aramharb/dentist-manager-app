@@ -1,5 +1,6 @@
 package com.example.demo.service.impl;
 
+import com.example.demo.tenant.CabinetContext;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
@@ -89,7 +90,8 @@ public class ExpenseServiceImpl implements ExpenseService {
                 snapshot.billingPeriodMonths(), snapshot.amount(), snapshot.status().name(), snapshot.label(),
                 snapshot.description(), snapshot.supplier(), snapshot.invoiceNumber(), snapshot.owner(),
                 snapshot.sourceRole(), snapshot.enteredBy(), snapshot.unexpected(), snapshot.unexpectedNote(),
-                snapshot.paymentMethod(), snapshot.taxDeductible(), snapshot.recurring(), snapshot.attachmentUrl());
+                snapshot.paymentMethod(), snapshot.taxDeductible(), snapshot.recurring(), snapshot.attachmentUrl(),
+                CabinetContext.require());
         return findById(snapshot.id());
     }
 

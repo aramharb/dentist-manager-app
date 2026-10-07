@@ -66,6 +66,7 @@ class AppointmentServiceImplTests {
         when(patientRepository.findById(PATIENT_ID)).thenReturn(Optional.of(patient));
 
         doctor = mock(LoginUser.class);
+        when(doctor.getCabinetId()).thenReturn(null);
         when(doctor.getId()).thenReturn(DOCTOR_ID);
         when(doctor.getFullName()).thenReturn("Dr. Active");
         when(doctor.getRole()).thenReturn("doctor");

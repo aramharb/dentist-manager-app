@@ -8,7 +8,7 @@ import jakarta.validation.constraints.*;
 
 @Entity
 @Table(name = "treatment_procedure")
-public class TreatmentProcedure {
+public class TreatmentProcedure extends CabinetOwned {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "treatment_id", nullable = false)

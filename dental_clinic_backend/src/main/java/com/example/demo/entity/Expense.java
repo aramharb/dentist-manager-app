@@ -9,7 +9,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 @Entity
 @Table(name = "expense")
-public class Expense {
+public class Expense extends CabinetOwned {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

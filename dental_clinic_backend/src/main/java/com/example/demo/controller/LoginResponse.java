@@ -8,6 +8,8 @@ public class LoginResponse {
     private String fullName;
     private String token;
     private String message;
+    private Long cabinetId;
+    private String cabinetName;
 
     public LoginResponse() {
     }
@@ -24,6 +26,22 @@ public class LoginResponse {
         this.role = role;
         this.token = token;
         this.message = message;
+    }
+
+    public Long getCabinetId() {
+        return cabinetId;
+    }
+
+    public void setCabinetId(Long cabinetId) {
+        this.cabinetId = cabinetId;
+    }
+
+    public String getCabinetName() {
+        return cabinetName;
+    }
+
+    public void setCabinetName(String cabinetName) {
+        this.cabinetName = cabinetName;
     }
 
     public String getRole() {

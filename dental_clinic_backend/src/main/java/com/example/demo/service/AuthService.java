@@ -10,6 +10,8 @@ import com.example.demo.controller.LoginResponse;
 import com.example.demo.dto.UserDto;
 import com.example.demo.dto.SessionUserDto;
 import com.example.demo.entity.LoginUser;
+import com.example.demo.entity.Cabinet;
+import com.example.demo.repository.CabinetRepository;
 import com.example.demo.repository.LoginUserRepository;
 import com.example.demo.security.ClinicPrincipal;
 import com.example.demo.security.JwtTokenService;
@@ -19,9 +21,11 @@ public class AuthService {
     private final LoginUserRepository userRepository;
     private final JwtTokenService tokenService;
     private final UserPresenceService presenceService;
+    private final CabinetRepository cabinetRepository;
 
     public AuthService(LoginUserRepository userRepository, JwtTokenService tokenService,
-            UserPresenceService presenceService) {
+            UserPresenceService presenceService, CabinetRepository cabinetRepository) {
+        this.cabinetRepository = cabinetRepository;
         this.userRepository = userRepository;
         this.tokenService = tokenService;
         this.presenceService = presenceService;
@@ -37,13 +41,22 @@ public class AuthService {
         LoginUser user = userRepository.findByUsernameIgnoreCaseAndActiveTrue(username)
                 .filter(candidate -> candidate.getPassword().equals(password))
                 .orElseThrow(() -> new IllegalArgumentException("Invalid username or password."));
-        return new LoginResponse(user.getId(), user.getUsername(), user.getFullName(), user.getRole(),
-                tokenService.issue(user), "Login successful.");
+        Cabinet cabinet = cabinetOf(user);
+        if (cabinet != null && !Boolean.TRUE.equals(cabinet.getActive())) {
+            throw new IllegalArgumentException("Your cabinet is disabled. Contact the administrator.");
+        }
+        LoginResponse response = new LoginResponse(user.getId(), user.getUsername(), user.getFullName(),
+                user.getRole(), tokenService.issue(user), "Login successful.");
+        if (cabinet != null) {
+            response.setCabinetId(cabinet.getId());
+            response.setCabinetName(cabinet.getName());
+        }
+        return response;
     }
 
     @Transactional(readOnly = true)
-    public List<UserDto.Response> users() {
-        return userRepository.findByActiveTrueOrderByRoleAscFullNameAsc().stream()
+    public List<UserDto.Response> users(ClinicPrincipal principal) {
+        return userRepository.findByCabinetIdAndActiveTrueOrderByRoleAscFullNameAsc(principal.requireCabinetId()).stream()
                 .filter(user -> !"admin".equalsIgnoreCase(user.getRole()))
                 .map(user -> new UserDto.Response(user.getId(), user.getUsername(), user.getFullName(), user.getRole(),
                         presenceService.isOnline(user.getUsername())))
@@ -69,8 +82,14 @@ public class AuthService {
             default -> List.of("dashboard:secretary", "patients:read", "patients:write", "appointments:write",
                     "expenses:write", "messages:write");
         };
+        Cabinet cabinet = cabinetOf(user);
         return new SessionUserDto(user.getId(), user.getUsername(), user.getFullName(), role,
-                Boolean.TRUE.equals(user.getActive()), permissions);
+                Boolean.TRUE.equals(user.getActive()), permissions,
+                cabinet == null ? null : cabinet.getId(), cabinet == null ? null : cabinet.getName());
+    }
+
+    private Cabinet cabinetOf(LoginUser user) {
+        return user.getCabinetId() == null ? null : cabinetRepository.findById(user.getCabinetId()).orElse(null);
     }
 
     private String normalize(String value) {

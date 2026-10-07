@@ -3,6 +3,7 @@ package com.example.demo.security;
 import java.io.IOException;
 import java.security.Principal;
 
+import com.example.demo.tenant.CabinetContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -36,7 +37,12 @@ public class MessagingJwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             ClinicPrincipal principal = tokenService.verify(bearerToken(request.getHeader(HttpHeaders.AUTHORIZATION)));
-            filterChain.doFilter(new PrincipalRequest(request, principal), response);
+            CabinetContext.set(principal.cabinetId());
+            try {
+                filterChain.doFilter(new PrincipalRequest(request, principal), response);
+            } finally {
+                CabinetContext.clear();
+            }
         } catch (AuthenticationException exception) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);

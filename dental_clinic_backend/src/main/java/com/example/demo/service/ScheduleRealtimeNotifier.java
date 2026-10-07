@@ -14,6 +14,7 @@ import com.example.demo.dto.AppointmentResponse;
 import com.example.demo.dto.DoctorWorkingHoursDto;
 import com.example.demo.repository.LoginUserRepository;
 
+import com.example.demo.tenant.CabinetContext;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
@@ -50,15 +51,18 @@ public class ScheduleRealtimeNotifier {
     }
 
     private void sendAfterCommit(ScheduleEvent event) {
+        Long cabinetId = CabinetContext.current();
         Runnable notification = () -> {
             String payload = objectMapper.writeValueAsString(event);
             Set<String> recipients = new LinkedHashSet<>();
+            if (cabinetId == null) return;
             if (event.doctorUserId() != null) {
                 userRepository.findById(event.doctorUserId())
                         .filter(user -> Boolean.TRUE.equals(user.getActive()))
+                        .filter(user -> cabinetId.equals(user.getCabinetId()))
                         .ifPresent(user -> recipients.add(user.getUsername()));
             }
-            userRepository.findByRoleIgnoreCaseAndActiveTrue("secretaire")
+            userRepository.findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(cabinetId, "secretaire")
                     .forEach(secretary -> recipients.add(secretary.getUsername()));
             recipients.forEach(username -> messagingTemplate.convertAndSendToUser(
                     username, "/queue/schedule", payload));

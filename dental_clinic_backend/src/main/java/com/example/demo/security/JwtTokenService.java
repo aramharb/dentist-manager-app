@@ -79,7 +79,10 @@ public class JwtTokenService {
                     .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))
                     .filter(candidate -> candidate.getUsername().equalsIgnoreCase(username))
                     .orElseThrow(this::invalidToken);
-            return new ClinicPrincipal(user.getId(), user.getUsername(), user.getRole());
+            if (user.getCabinetId() != null && !userRepository.isCabinetActive(user.getCabinetId())) {
+                throw invalidToken();
+            }
+            return new ClinicPrincipal(user.getId(), user.getUsername(), user.getRole(), user.getCabinetId());
         } catch (AuthenticationException exception) {
             throw exception;
         } catch (Exception exception) {

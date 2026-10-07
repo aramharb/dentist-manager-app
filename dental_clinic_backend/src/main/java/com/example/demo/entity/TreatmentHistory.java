@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "treatment_history")
-public class TreatmentHistory {
+public class TreatmentHistory extends CabinetOwned {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "treatment_id", nullable = false)
