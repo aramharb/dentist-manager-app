@@ -3,6 +3,9 @@ package com.example.demo.security;
 import java.security.Principal;
 
 public record ClinicPrincipal(Long userId, String username, String role, Long cabinetId) implements Principal {
+    /** Role of a client (patient) account; such a principal can only use the /api/client endpoints. */
+    public static final String CLIENT_ROLE = "client";
+
     public ClinicPrincipal(Long userId, String username, String role) {
         this(userId, username, role, null);
     }

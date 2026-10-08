@@ -2,14 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from './auth.service';
 import { SessionService, UserRole, workspaceFor } from '../core/auth/session.service';
 import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.component';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, CommonModule, LanguageSwitcherComponent],
+  imports: [FormsModule, CommonModule, LanguageSwitcherComponent, RouterLink],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })

@@ -19,6 +19,12 @@ public class Cabinet {
     private String phoneNumber;
     @Column(length = 150)
     private String email;
+    @Column(name = "owner_name", length = 160)
+    private String ownerName;
+    @Column(length = 200)
+    private String tagline;
+    @Column(name = "primary_color", nullable = false, length = 7, columnDefinition = "char(7)")
+    private String primaryColor = "#1689E8";
     @Column(nullable = false)
     private Boolean active = true;
     @Column(nullable = false)
@@ -40,6 +46,12 @@ public class Cabinet {
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    public String getOwnerName() { return ownerName; }
+    public void setOwnerName(String ownerName) { this.ownerName = ownerName; }
+    public String getTagline() { return tagline; }
+    public void setTagline(String tagline) { this.tagline = tagline; }
+    public String getPrimaryColor() { return primaryColor; }
+    public void setPrimaryColor(String primaryColor) { this.primaryColor = primaryColor; }
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
     public LocalDateTime getCreatedAt() { return createdAt; }

@@ -10,24 +10,37 @@ import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.entity.ClientAccount;
 import com.example.demo.entity.LoginUser;
+import com.example.demo.repository.ClientAccountRepository;
 import com.example.demo.repository.LoginUserRepository;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class JwtTokenService {
+    private static final String CLIENT_KIND = "client";
     private static final String HEADER = base64Url("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
 
     private final ObjectMapper objectMapper;
     private final LoginUserRepository userRepository;
+    private final ClientAccountRepository clientRepository;
     private final byte[] secret;
     private final long lifetimeSeconds;
 
     public JwtTokenService(ObjectMapper objectMapper, LoginUserRepository userRepository,
+            @Value("${app.auth.jwt-secret:change-this-development-jwt-secret-before-production-2026}") String secret,
+            @Value("${app.auth.jwt-lifetime-seconds:28800}") long lifetimeSeconds) {
+        this(objectMapper, userRepository, null, secret, lifetimeSeconds);
+    }
+
+    @Autowired
+    public JwtTokenService(ObjectMapper objectMapper, LoginUserRepository userRepository,
+            ClientAccountRepository clientRepository,
             @Value("${app.auth.jwt-secret:change-this-development-jwt-secret-before-production-2026}") String secret,
             @Value("${app.auth.jwt-lifetime-seconds:28800}") long lifetimeSeconds) {
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
@@ -35,16 +48,27 @@ public class JwtTokenService {
         }
         this.objectMapper = objectMapper;
         this.userRepository = userRepository;
+        this.clientRepository = clientRepository;
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
         this.lifetimeSeconds = lifetimeSeconds;
     }
 
     public String issue(LoginUser user) {
+        return sign(user.getUsername(), user.getId(), user.getRole(), null);
+    }
+
+    /** Token of a client (patient) account; it only opens the /api/client endpoints. */
+    public String issueClient(ClientAccount account) {
+        return sign(account.getPhone(), account.getId(), ClinicPrincipal.CLIENT_ROLE, CLIENT_KIND);
+    }
+
+    private String sign(String subject, Long id, String role, String kind) {
         long issuedAt = Instant.now().getEpochSecond();
         Map<String, Object> claims = new LinkedHashMap<>();
-        claims.put("sub", user.getUsername());
-        claims.put("uid", user.getId());
-        claims.put("role", user.getRole());
+        claims.put("sub", subject);
+        claims.put("uid", id);
+        claims.put("role", role);
+        if (kind != null) claims.put("kind", kind);
         claims.put("iat", issuedAt);
         claims.put("exp", issuedAt + lifetimeSeconds);
         try {
@@ -74,6 +98,14 @@ public class JwtTokenService {
             String username = claims.path("sub").asText("");
             if (userId <= 0 || username.isBlank() || expiresAt <= Instant.now().getEpochSecond()) {
                 throw invalidToken();
+            }
+            if (CLIENT_KIND.equals(claims.path("kind").asText(""))) {
+                if (clientRepository == null) throw invalidToken();
+                ClientAccount account = clientRepository.findById(userId)
+                        .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))
+                        .filter(candidate -> candidate.getPhone().equals(username))
+                        .orElseThrow(this::invalidToken);
+                return new ClinicPrincipal(account.getId(), account.getPhone(), ClinicPrincipal.CLIENT_ROLE, null);
             }
             LoginUser user = userRepository.findById(userId)
                     .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))

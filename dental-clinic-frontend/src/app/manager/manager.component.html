@@ -21,6 +21,17 @@
   </header>
 
   <main class="admin-content">
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" [class.active]="view() === 'team'" (click)="view.set('team')">Équipe</button>
+      <button type="button" [class.active]="view() === 'identity'" (click)="view.set('identity')">Identité du cabinet</button>
+    </nav>
+
+    <section class="card identity-card" *ngIf="view() === 'identity'">
+      <p class="hint">Logo, photo, couleur et nom du propriétaire : ils apparaissent dans l'espace client et dans votre espace de travail.</p>
+      <app-branding-editor />
+    </section>
+
+    <ng-container *ngIf="view() === 'team'">
     <section class="stat-strip" aria-label="Team summary">
       <article><small>Accounts</small><strong>{{ stats().total }}</strong></article>
       <article><small>Doctors</small><strong>{{ stats().doctors }}</strong></article>
@@ -92,6 +103,7 @@
         </table>
       </div>
     </section>
+    </ng-container>
   </main>
 
   <app-modal [open]="!!dialogMode" [title]="dialogTitle" eyebrow="Team account" (dismissed)="closeDialog()">

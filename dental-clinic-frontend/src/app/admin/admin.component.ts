@@ -9,9 +9,10 @@ import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.compon
 import { NotificationService } from '../core/notifications/notification.service';
 import { ModalComponent } from '../secretaire/shared/modal/modal.component';
 import { InvitationLinkComponent } from '../shared/invitation-link/invitation-link.component';
+import { BrandingEditorComponent } from '../branding/branding-editor.component';
 import { AdminCabinetService, AdminUser, AdminUserService, Cabinet, Invitation } from './admin-user.service';
 
-type DialogMode = 'create' | 'edit' | 'cabinet-create' | 'cabinet-edit' | 'manager';
+type DialogMode = 'create' | 'edit' | 'cabinet-create' | 'cabinet-edit' | 'manager' | 'branding';
 type AdminView = 'cabinets' | 'accounts';
 
 interface UserForm {
@@ -44,7 +45,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, LanguageSwitcherComponent, ModalComponent, InvitationLinkComponent],
+  imports: [CommonModule, FormsModule, LanguageSwitcherComponent, ModalComponent, InvitationLinkComponent, BrandingEditorComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css',
 })
@@ -242,6 +243,17 @@ export class AdminComponent implements OnInit {
         this.notify('Link not created', this.errorMessage(error));
       },
     });
+  }
+
+  openBranding(cabinet: Cabinet): void {
+    this.selectedCabinet = cabinet;
+    this.openDialog('branding');
+  }
+
+  closeBranding(): void {
+    this.dialogMode = null;
+    this.selectedCabinet = null;
+    this.load();
   }
 
   openReplaceManager(cabinet: Cabinet): void {

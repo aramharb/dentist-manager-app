@@ -73,7 +73,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     if (authorization == null || !authorization.startsWith("Bearer ")) {
                         throw new AuthenticationException("Authentication token is required.");
                     }
-                    accessor.setUser(tokenService.verify(authorization.substring(7).trim()));
+                    ClinicPrincipal connecting = tokenService.verify(authorization.substring(7).trim());
+                    if (connecting.hasRole(ClinicPrincipal.CLIENT_ROLE)) {
+                        throw new AuthenticationException("Client accounts cannot open a staff connection.");
+                    }
+                    accessor.setUser(connecting);
                 }
                 if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())
                         && !"/user/queue/messages".equals(accessor.getDestination())

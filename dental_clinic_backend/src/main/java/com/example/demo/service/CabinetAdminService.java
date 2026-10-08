@@ -98,7 +98,8 @@ public class CabinetAdminService {
         Long expenses = jdbc.queryForObject("select count(*) from expense where cabinet_id = ?", Long.class, id);
         Long materials = jdbc.queryForObject("select count(*) from material_inventory where cabinet_id = ?",
                 Long.class, id);
-        if ((members != null && members > 0) || stats.patients() > 0 || stats.appointments() > 0
+        Long clients = jdbc.queryForObject("select count(*) from client_membership where cabinet_id = ?", Long.class, id);
+        if ((clients != null && clients > 0) || (members != null && members > 0) || stats.patients() > 0 || stats.appointments() > 0
                 || stats.treatments() > 0 || (expenses != null && expenses > 0)
                 || (materials != null && materials > 0)) {
             throw new BusinessRuleException(
@@ -150,7 +151,8 @@ public class CabinetAdminService {
         return new CabinetDto.Response(cabinet.getId(), cabinet.getName(), cabinet.getCode(), cabinet.getAddress(),
                 cabinet.getPhoneNumber(), cabinet.getEmail(), Boolean.TRUE.equals(cabinet.getActive()),
                 cabinet.getCreatedAt(), cabinet.getUpdatedAt(), stats(cabinet.getId()),
-                userService.activeManagerOf(cabinet.getId()));
+                userService.activeManagerOf(cabinet.getId()), cabinet.getOwnerName(), cabinet.getTagline(),
+                cabinet.getPrimaryColor());
     }
 
     private String code(String value) {

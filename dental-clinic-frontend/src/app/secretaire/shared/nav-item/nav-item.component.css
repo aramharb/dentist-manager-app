@@ -44,3 +44,18 @@
     font-size: 11px;
   }
 }
+
+.nav-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  background: #ef4444;
+}

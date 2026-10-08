@@ -37,12 +37,17 @@ export const routes: Routes = [
       { path: 'home', loadComponent: () => import('./secretaire/pages/home/home.component').then((m) => m.HomeComponent) },
       { path: 'clients', loadComponent: () => import('./secretaire/pages/clients/clients.component').then((m) => m.ClientsComponent) },
       { path: 'appointments', loadComponent: () => import('./secretaire/pages/appointments/appointments.component').then((m) => m.AppointmentsComponent) },
+      { path: 'online-requests', loadComponent: () => import('./secretaire/pages/booking-requests/booking-requests.component').then((m) => m.BookingRequestsComponent) },
       { path: 'payments', loadComponent: () => import('./secretaire/pages/payments/payments.component').then((m) => m.PaymentsComponent) },
       { path: 'expenses', loadComponent: () => import('./secretaire/pages/expenses/expenses.component').then((m) => m.ExpensesComponent) },
       { path: 'messages', loadComponent: () => import('./secretaire/pages/messages/messages.component').then((m) => m.MessagesComponent) },
       { path: 'materials', loadComponent: () => import('./secretaire/pages/materials/materials.component').then((m) => m.MaterialsComponent) },
       { path: 'dashboard', loadComponent: () => import('./secretaire/pages/dashboard/dashboard.component').then((m) => m.DashboardComponent) },
     ],
+  },
+  {
+    path: 'client',
+    loadComponent: () => import('./client/client-portal.component').then((m) => m.ClientPortalComponent),
   },
   {
     path: 'manager',

@@ -12,6 +12,8 @@ import com.example.demo.service.DuplicatePatientNumberException;
 import com.example.demo.service.PatientNotFoundException;
 import com.example.demo.service.MessagingAccessDeniedException;
 import com.example.demo.service.BusinessRuleException;
+import com.example.demo.service.TooManyRequestsException;
+import com.example.demo.security.AuthenticationException;
 import com.example.demo.exception.ResourceNotFoundException;
 
 @RestControllerAdvice
@@ -53,6 +55,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ApiErrorResponse> handleBusinessRule(BusinessRuleException exception) {
         return build(HttpStatus.CONFLICT, "Operation not allowed", List.of(exception.getMessage()));
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiErrorResponse> handleTooManyRequests(TooManyRequestsException exception) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, "Too many requests", List.of(exception.getMessage()));
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthentication(AuthenticationException exception) {
+        return build(HttpStatus.UNAUTHORIZED, "Unauthorized", List.of(exception.getMessage()));
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String error, List<String> messages) {

@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 public class CabinetDto {
     public record Response(Long id, String name, String code, String address, String phoneNumber, String email,
             boolean active, LocalDateTime createdAt, LocalDateTime updatedAt, Stats stats,
-            AdminUserDto.Response manager) {}
+            AdminUserDto.Response manager, String ownerName, String tagline, String primaryColor) {}
 
     /** A new cabinet comes with its manager and the one-time link that manager uses to set a password. */
     public record Created(Response cabinet, InvitationDto.Created managerInvitation) {}

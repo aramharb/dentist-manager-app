@@ -73,6 +73,9 @@ export interface Cabinet {
   updatedAt: string;
   stats: CabinetStats;
   manager: AdminUser | null;
+  ownerName: string | null;
+  tagline: string | null;
+  primaryColor: string;
 }
 
 export interface CreatedCabinet {

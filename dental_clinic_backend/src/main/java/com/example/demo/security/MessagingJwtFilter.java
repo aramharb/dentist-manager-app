@@ -30,7 +30,10 @@ public class MessagingJwtFilter extends OncePerRequestFilter {
         return HttpMethod.OPTIONS.matches(request.getMethod())
                 || !path.startsWith("/api/")
                 || path.equals("/api/login")
-                || path.startsWith("/api/invitations/");
+                || path.startsWith("/api/invitations/")
+                || path.startsWith("/api/public/")
+                || path.equals("/api/client/register")
+                || path.equals("/api/client/login");
     }
 
     @Override
@@ -38,6 +41,15 @@ public class MessagingJwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             ClinicPrincipal principal = tokenService.verify(bearerToken(request.getHeader(HttpHeaders.AUTHORIZATION)));
+            // Client accounts live in their own id space: they may only use /api/client, and staff
+            // may not use it, so an account id can never be mistaken for a staff user id.
+            boolean clientPath = request.getRequestURI().startsWith("/api/client/");
+            if (clientPath != principal.hasRole(ClinicPrincipal.CLIENT_ROLE)) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.getWriter().write("{\"status\":403,\"error\":\"Forbidden\",\"messages\":[\"This account cannot use this resource.\"]}");
+                return;
+            }
             CabinetContext.set(principal.cabinetId());
             try {
                 filterChain.doFilter(new PrincipalRequest(request, principal), response);

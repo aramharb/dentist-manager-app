@@ -1,5 +1,6 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { Subscription, merge } from 'rxjs';
@@ -28,6 +29,10 @@ export class Secretaire implements OnInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly appointmentService = inject(AppointmentService);
   private readonly language = inject(AppLanguageService);
+  private readonly http = inject(HttpClient);
+  private requestsTimer?: ReturnType<typeof setInterval>;
+  /** Appointment requests from the client space waiting for this secretary. */
+  pendingOnlineRequests = 0;
 
   secretary = { id: 0, fullName: '', role: 'Medical secretary', avatar: 'U' };
   notifications: { count: number; userId?: number; title: string; message: string; time: string; read: boolean }[] = [];
@@ -43,6 +48,7 @@ export class Secretaire implements OnInit, OnDestroy {
     { icon: 'home', label: 'Accueil', link: '/secretaire/home' },
     { icon: 'users', label: 'Clients', link: '/secretaire/clients' },
     { icon: 'calendar', label: 'Rendez-vous', link: '/secretaire/appointments' },
+    { icon: 'users', label: 'Demandes en ligne', link: '/secretaire/online-requests' },
     { icon: 'briefcase', label: 'Payments', link: '/secretaire/payments' },
     { icon: 'chart', label: 'Expenses', link: '/secretaire/expenses' },
     { icon: 'bell', label: 'Messages', link: '/secretaire/messages' },
@@ -54,6 +60,8 @@ export class Secretaire implements OnInit, OnDestroy {
     if (!isPlatformBrowser(this.platformId)) return;
     this.updateClock();
     this.clockTimer = setInterval(() => this.updateClock(), 60_000);
+    this.loadPendingOnlineRequests();
+    this.requestsTimer = setInterval(() => this.loadPendingOnlineRequests(), 30_000);
     this.messageSubscriptions.add(this.language.language$.subscribe(() => {
       this.updateClock();
       this.loadMessageNotifications();
@@ -76,8 +84,19 @@ export class Secretaire implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.clockTimer) clearInterval(this.clockTimer);
+    if (this.requestsTimer) clearInterval(this.requestsTimer);
     this.notificationRequest?.unsubscribe();
     this.messageSubscriptions.unsubscribe();
+  }
+
+  private loadPendingOnlineRequests(): void {
+    this.http.get<{ pending: number }>('/api/booking-requests/count').subscribe({
+      next: (result) => {
+        this.pendingOnlineRequests = result.pending;
+        this.cdr.markForCheck();
+      },
+      error: () => undefined,
+    });
   }
 
   get unreadNotifications(): number {

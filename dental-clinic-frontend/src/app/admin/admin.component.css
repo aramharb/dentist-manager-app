@@ -510,3 +510,19 @@ tr.inactive td.actions-col {
   flex-wrap: wrap;
   justify-content: flex-start;
 }
+
+.identity-card {
+  padding: 24px;
+}
+
+.identity-card .hint {
+  margin-bottom: 16px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}

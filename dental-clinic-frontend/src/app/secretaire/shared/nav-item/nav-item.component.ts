@@ -17,6 +17,7 @@ import { ClinicIconComponent } from '../clinic-icon/clinic-icon.component';
     >
       <app-clinic-icon class="nav-icon" [name]="icon"></app-clinic-icon>
       <span>{{ label }}</span>
+      <i class="nav-badge" *ngIf="badge > 0">{{ badge }}</i>
     </a>
   `,
   styleUrl: './nav-item.component.css',
@@ -25,5 +26,6 @@ export class NavItemComponent {
   @Input() icon = '';
   @Input() label = '';
   @Input() link = '';
+  @Input() badge = 0;
   @Output() navigate = new EventEmitter<string>();
 }

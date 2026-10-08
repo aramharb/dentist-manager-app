@@ -1,0 +1,222 @@
+<div class="portal" [style.--accent]="accent()" [style.--on-accent]="accentText()">
+  <header class="portal-top">
+    <div class="portal-brand">
+      <span class="portal-mark">DC</span>
+      <div>
+        <strong>Espace client</strong>
+        <small>Prenez rendez-vous en ligne</small>
+      </div>
+    </div>
+    <div class="portal-user" *ngIf="session.account() as account">
+      <span class="avatar">{{ initials(account.fullName) }}</span>
+      <div>
+        <strong>{{ account.fullName }}</strong>
+        <small>{{ account.phone }}</small>
+      </div>
+      <button type="button" class="ghost" (click)="logout()">Se déconnecter</button>
+    </div>
+    <a class="ghost staff-link" routerLink="/login" *ngIf="!session.account()">Accès personnel</a>
+  </header>
+
+  <main class="portal-main">
+    <!-- ================================================================ not signed in -->
+    <ng-container *ngIf="!session.isAuthenticated">
+      <section class="auth-card">
+        <h1>{{ mode === 'login' ? 'Connexion' : 'Créer mon compte' }}</h1>
+        <p class="lead">
+          {{ mode === 'login' ? 'Connectez-vous avec votre numéro de téléphone.' : 'Créez votre compte avec votre numéro de téléphone pour réserver chez votre dentiste.' }}
+        </p>
+        <form (submit)="$event.preventDefault(); submitAuth()">
+          <label *ngIf="mode === 'register'">
+            Nom complet
+            <input name="fullName" [(ngModel)]="fullName" autocomplete="name" />
+          </label>
+          <label>
+            Numéro de téléphone
+            <input name="phone" type="tel" inputmode="tel" [(ngModel)]="phone" autocomplete="tel" placeholder="22 123 456" />
+          </label>
+          <label>
+            Mot de passe
+            <input name="password" type="password" [(ngModel)]="password" [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'" />
+          </label>
+          <p class="error" *ngIf="error()" role="alert">{{ error() }}</p>
+          <button class="primary" type="submit" [disabled]="busy()">
+            {{ busy() ? 'Veuillez patienter…' : mode === 'login' ? 'Me connecter' : 'Créer mon compte' }}
+          </button>
+        </form>
+        <p class="switch">
+          <ng-container *ngIf="mode === 'login'">Pas encore de compte ? <button type="button" class="link" (click)="mode = 'register'; error.set('')">Créer un compte</button></ng-container>
+          <ng-container *ngIf="mode === 'register'">Déjà un compte ? <button type="button" class="link" (click)="mode = 'login'; error.set('')">Se connecter</button></ng-container>
+        </p>
+      </section>
+
+      <section class="showcase" *ngIf="cabinets().length">
+        <h2>Nos cabinets</h2>
+        <div class="cabinet-grid">
+          <article class="cabinet-card static" *ngFor="let cabinet of cabinets()" [style.--accent]="cabinet.primaryColor">
+            <div class="cover" [style.background-image]="cabinet.hasCover ? 'url(' + imageUrl(cabinet, 'cover') + ')' : null"></div>
+            <div class="card-body">
+              <img class="logo" *ngIf="cabinet.hasLogo" [src]="imageUrl(cabinet, 'logo')" [alt]="cabinet.name" />
+              <span class="logo fallback" *ngIf="!cabinet.hasLogo">{{ initials(cabinet.name) }}</span>
+              <h3>{{ cabinet.name }}</h3>
+              <p class="owner" *ngIf="cabinet.ownerName">{{ cabinet.ownerName }}</p>
+              <p class="tagline" *ngIf="cabinet.tagline">{{ cabinet.tagline }}</p>
+              <p class="meta" *ngIf="cabinet.address">{{ cabinet.address }}</p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- ================================================================ signed in -->
+    <ng-container *ngIf="session.isAuthenticated">
+      <p class="error banner" *ngIf="error()" role="alert">{{ error() }}</p>
+
+      <!-- step: choose a cabinet -->
+      <section *ngIf="step() === 'cabinet'">
+        <h1>Prendre rendez-vous</h1>
+        <p class="lead">1. Choisissez votre cabinet</p>
+        <p class="muted" *ngIf="loadingCabinets()">Chargement…</p>
+        <p class="muted" *ngIf="!loadingCabinets() && !cabinets().length">Aucun cabinet disponible pour le moment.</p>
+        <div class="cabinet-grid">
+          <button type="button" class="cabinet-card" *ngFor="let cabinet of cabinets()" [style.--accent]="cabinet.primaryColor" (click)="chooseCabinet(cabinet)">
+            <div class="cover" [style.background-image]="cabinet.hasCover ? 'url(' + imageUrl(cabinet, 'cover') + ')' : null"></div>
+            <div class="card-body">
+              <img class="logo" *ngIf="cabinet.hasLogo" [src]="imageUrl(cabinet, 'logo')" [alt]="cabinet.name" />
+              <span class="logo fallback" *ngIf="!cabinet.hasLogo">{{ initials(cabinet.name) }}</span>
+              <h3>{{ cabinet.name }}</h3>
+              <p class="owner" *ngIf="cabinet.ownerName">{{ cabinet.ownerName }}</p>
+              <p class="tagline" *ngIf="cabinet.tagline">{{ cabinet.tagline }}</p>
+              <p class="meta" *ngIf="cabinet.address">{{ cabinet.address }}</p>
+              <span class="badge" *ngIf="membershipOf(cabinet) as m">{{ m.status === 'LINKED' ? 'Dossier confirmé' : 'Dossier envoyé' }}</span>
+            </div>
+          </button>
+        </div>
+
+        <h2 class="section-title">Mes rendez-vous</h2>
+        <p class="muted" *ngIf="!requests().length">Vous n'avez encore aucune demande.</p>
+        <ul class="requests" *ngIf="requests().length">
+          <li *ngFor="let request of requests()" [attr.data-status]="request.effectiveStatus">
+            <div>
+              <strong>{{ formatDay(request.date) }} à {{ formatTime(request.startTime) }}</strong>
+              <span>{{ request.cabinetName }} · {{ request.doctorName }}</span>
+              <small *ngIf="request.rejectReason">Motif : {{ request.rejectReason }}</small>
+              <small *ngIf="request.effectiveStatus === 'CANCELLED_BY_CABINET'">Contactez le cabinet pour reprogrammer.</small>
+            </div>
+            <div class="request-side">
+              <span class="status">{{ statusLabel(request) }}</span>
+              <button type="button" class="ghost danger" *ngIf="request.status === 'PENDING'" (click)="cancel(request)">Annuler</button>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- cabinet header for the next steps -->
+      <header class="cabinet-banner" *ngIf="selected() as cabinet; else noCabinet" [hidden]="step() === 'cabinet'">
+        <div class="banner-cover" [style.background-image]="cabinet.hasCover ? 'url(' + imageUrl(cabinet, 'cover') + ')' : null"></div>
+        <div class="banner-body">
+          <img class="logo" *ngIf="cabinet.hasLogo" [src]="imageUrl(cabinet, 'logo')" [alt]="cabinet.name" />
+          <span class="logo fallback" *ngIf="!cabinet.hasLogo">{{ initials(cabinet.name) }}</span>
+          <div>
+            <h1>{{ cabinet.name }}</h1>
+            <p *ngIf="cabinet.ownerName">{{ cabinet.ownerName }}</p>
+            <p class="tagline" *ngIf="cabinet.tagline">{{ cabinet.tagline }}</p>
+          </div>
+        </div>
+      </header>
+      <ng-template #noCabinet></ng-template>
+
+      <!-- step: my details -->
+      <section class="step-card" *ngIf="step() === 'details'">
+        <h2>2. Vos informations</h2>
+        <p class="muted">Ces informations sont envoyées au cabinet pour créer ou retrouver votre dossier. Le secrétariat les vérifie.</p>
+        <form class="grid-form" (submit)="$event.preventDefault(); saveDetails()">
+          <label>Prénom<input name="firstName" [(ngModel)]="profile.firstName" [disabled]="profileLocked" required /></label>
+          <label>Nom<input name="lastName" [(ngModel)]="profile.lastName" [disabled]="profileLocked" required /></label>
+          <label>Sexe
+            <select name="gender" [(ngModel)]="profile.gender" [disabled]="profileLocked">
+              <option value="Male">Homme</option>
+              <option value="Female">Femme</option>
+            </select>
+          </label>
+          <label>Date de naissance<input name="birthDate" type="date" [(ngModel)]="profile.birthDate" [disabled]="profileLocked" /></label>
+          <label>Adresse<input name="address" [(ngModel)]="profile.address" [disabled]="profileLocked" /></label>
+          <label>Email<input name="email" type="email" [(ngModel)]="profile.email" [disabled]="profileLocked" /></label>
+          <label>Groupe sanguin
+            <select name="bloodType" [(ngModel)]="profile.bloodType" [disabled]="profileLocked">
+              <option [ngValue]="null">Je ne sais pas</option>
+              <option *ngFor="let type of ['A+','A-','B+','B-','AB+','AB-','O+','O-']" [value]="type">{{ type }}</option>
+            </select>
+          </label>
+          <label>Allergies<input name="allergies" [(ngModel)]="profile.allergies" [disabled]="profileLocked" /></label>
+          <label class="check"><input name="cnamCovered" type="checkbox" [(ngModel)]="profile.cnamCovered" [disabled]="profileLocked" /> Je suis couvert par la CNAM</label>
+          <label *ngIf="profile.cnamCovered">Numéro CNAM<input name="cnamNumber" [(ngModel)]="profile.cnamNumber" [disabled]="profileLocked" /></label>
+          <p class="error wide" *ngIf="error()" role="alert">{{ error() }}</p>
+          <div class="actions wide">
+            <button type="button" class="ghost" (click)="backToCabinets()">Retour</button>
+            <button type="submit" class="primary" [disabled]="busy() || profileLocked">{{ busy() ? 'Envoi…' : 'Continuer' }}</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- step: choose a doctor -->
+      <section class="step-card" *ngIf="step() === 'doctor'">
+        <h2>2. Choisissez votre médecin</h2>
+        <p class="muted" *ngIf="!doctors().length">Aucun médecin n'est disponible dans ce cabinet pour le moment.</p>
+        <div class="doctor-grid">
+          <button type="button" class="doctor" *ngFor="let doctor of doctors()" (click)="chooseDoctor(doctor)">
+            <span class="avatar">{{ initials(doctor.fullName) }}</span>
+            <strong>{{ doctor.fullName }}</strong>
+            <small>Voir les horaires libres</small>
+          </button>
+        </div>
+        <div class="actions">
+          <button type="button" class="ghost" (click)="backToCabinets()">Changer de cabinet</button>
+          <button type="button" class="ghost" *ngIf="!profileLocked" (click)="editDetails()">Modifier mes informations</button>
+        </div>
+      </section>
+
+      <!-- step: choose a time -->
+      <section class="step-card" *ngIf="step() === 'time'">
+        <h2>3. Choisissez un horaire avec {{ selectedDoctor()?.fullName }}</h2>
+        <div class="week-nav">
+          <button type="button" class="ghost" [disabled]="!canGoBack || loadingTimes()" (click)="previousWeek()">‹ Semaine précédente</button>
+          <span>À partir du {{ formatDay(weekStart) }}</span>
+          <button type="button" class="ghost" [disabled]="!canGoForward || loadingTimes()" (click)="nextWeek()">Semaine suivante ›</button>
+        </div>
+        <p class="muted" *ngIf="loadingTimes()">Chargement des horaires…</p>
+        <p class="muted" *ngIf="!loadingTimes() && !days().length">Aucun horaire libre cette semaine. Essayez la semaine suivante.</p>
+        <div class="day" *ngFor="let day of days()">
+          <h3>{{ formatDay(day.date) }}</h3>
+          <div class="times">
+            <button type="button" *ngFor="let time of day.times" [class.on]="chosen()?.date === day.date && chosen()?.time === time" (click)="pick(day, time)">{{ formatTime(time) }}</button>
+          </div>
+        </div>
+        <ng-container *ngIf="chosen() as slot">
+          <div class="confirm-box">
+            <p><strong>{{ formatDay(slot.date) }} à {{ formatTime(slot.time) }}</strong> avec {{ selectedDoctor()?.fullName }}</p>
+            <label>Motif ou message (facultatif)
+              <input name="note" [(ngModel)]="note" maxlength="500" placeholder="Douleur, contrôle, détartrage…" />
+            </label>
+            <p class="error" *ngIf="error()" role="alert">{{ error() }}</p>
+            <button type="button" class="primary" [disabled]="busy()" (click)="submitRequest()">{{ busy() ? 'Envoi…' : 'Envoyer ma demande' }}</button>
+          </div>
+        </ng-container>
+        <div class="actions">
+          <button type="button" class="ghost" (click)="backToDoctors()">Changer de médecin</button>
+        </div>
+      </section>
+
+      <!-- step: done -->
+      <section class="step-card done" *ngIf="step() === 'done' && booked() as request">
+        <h2>Demande envoyée ✓</h2>
+        <p>
+          <strong>{{ formatDay(request.date) }} à {{ formatTime(request.startTime) }}</strong> avec {{ request.doctorName }}
+          ({{ request.cabinetName }}).
+        </p>
+        <p class="muted">Le secrétariat du cabinet va confirmer votre rendez-vous. Suivez son état dans « Mes rendez-vous ».</p>
+        <div class="actions"><button type="button" class="primary" (click)="backToCabinets()">Voir mes rendez-vous</button></div>
+      </section>
+    </ng-container>
+  </main>
+</div>

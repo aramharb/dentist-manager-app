@@ -10,6 +10,7 @@ import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.compon
 import { NotificationService } from '../core/notifications/notification.service';
 import { ModalComponent } from '../secretaire/shared/modal/modal.component';
 import { InvitationLinkComponent } from '../shared/invitation-link/invitation-link.component';
+import { BrandingEditorComponent } from '../branding/branding-editor.component';
 
 type DialogMode = 'create' | 'edit';
 
@@ -26,7 +27,7 @@ const ROLE_LABELS: Partial<Record<UserRole, string>> = { doctor: 'Doctor', secre
 @Component({
   selector: 'app-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule, LanguageSwitcherComponent, ModalComponent, InvitationLinkComponent],
+  imports: [CommonModule, FormsModule, LanguageSwitcherComponent, ModalComponent, InvitationLinkComponent, BrandingEditorComponent],
   templateUrl: './manager.component.html',
   styleUrl: '../admin/admin.component.css',
 })
@@ -46,6 +47,7 @@ export class ManagerComponent implements OnInit {
   readonly accounts = signal<AdminUser[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly view = signal<'team' | 'identity'>('team');
   readonly filter = signal('');
   readonly showInactive = signal(true);
 
