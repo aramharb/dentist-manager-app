@@ -26,6 +26,8 @@ public interface LoginUserRepository extends JpaRepository<LoginUser, Long> {
     long countByRoleIgnoreCaseAndActiveTrue(String role);
     List<LoginUser> findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(Long cabinetId, String role);
     long countByCabinetId(Long cabinetId);
+    boolean existsByCabinetIdAndRoleIgnoreCaseAndFullNameIgnoreCaseAndActiveTrue(Long cabinetId, String role, String fullName);
+    boolean existsByCabinetIdAndRoleIgnoreCaseAndFullNameIgnoreCaseAndActiveTrueAndIdNot(Long cabinetId, String role, String fullName, Long id);
     long countByCabinetIdAndRoleIgnoreCaseAndActiveTrue(Long cabinetId, String role);
 
     @Query("select count(c) > 0 from Cabinet c where c.id = :cabinetId and c.active = true")

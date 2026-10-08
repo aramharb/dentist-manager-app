@@ -17,7 +17,6 @@ import jakarta.validation.Valid;
 /** Appointment requests sent from the client space: only the cabinet's secretaries handle them. */
 @RestController
 @RequestMapping("/api/booking-requests")
-@CrossOrigin(origins = { "http://localhost:4200", "http://127.0.0.1:4200" })
 public class BookingRequestController {
     private final BookingRequestService service;
 

@@ -46,6 +46,11 @@ export class AuthService {
     );
   }
 
+  /** Ends the session on the server too, so the token stops working immediately. */
+  logout(): Observable<void> {
+    return this.http.post<void>('/api/auth/logout', {});
+  }
+
   me(): Observable<SessionUser> {
     return this.http.get<SessionUser>('/api/auth/me');
   }

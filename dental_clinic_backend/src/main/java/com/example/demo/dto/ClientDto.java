@@ -19,6 +19,12 @@ public class ClientDto {
 
     public record Account(Long id, String fullName, String phone) {}
 
+    /** Everything the platform holds about a client account (right of access). */
+    public record Export(java.time.LocalDateTime exportedAt, Account account, List<Membership> cabinets,
+            List<MyRequest> appointmentRequests) {}
+
+    public record DeleteAccountRequest(@NotBlank String password) {}
+
     public record AuthResponse(String token, Account account) {}
 
     /** The details a client gives to a cabinet: the same fields as "add client" on the secretary side. */

@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
-import { AdminUser, Invitation, ManagerUserService } from '../admin/admin-user.service';
+import { AccessLogEntry, AdminUser, Invitation, ManagerUserService } from '../admin/admin-user.service';
 import { SessionLifecycleService } from '../core/auth/session-lifecycle.service';
 import { SessionService, UserRole } from '../core/auth/session.service';
 import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.component';
@@ -47,7 +47,9 @@ export class ManagerComponent implements OnInit {
   readonly accounts = signal<AdminUser[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
-  readonly view = signal<'team' | 'identity'>('team');
+  readonly view = signal<'team' | 'identity' | 'journal'>('team');
+  readonly accessLog = signal<AccessLogEntry[]>([]);
+  readonly logLoading = signal(false);
   readonly filter = signal('');
   readonly showInactive = signal(true);
 
@@ -121,6 +123,39 @@ export class ManagerComponent implements OnInit {
     if (this.saving()) return;
     this.dialogMode = null;
     this.selected = null;
+  }
+
+  openJournal(): void {
+    this.view.set('journal');
+    this.logLoading.set(true);
+    this.members.accessLog().subscribe({
+      next: (entries) => {
+        this.accessLog.set(entries);
+        this.logLoading.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.logLoading.set(false);
+        this.notify('Journal indisponible', this.errorMessage(error));
+      },
+    });
+  }
+
+  unlock(user: AdminUser): void {
+    this.saving.set(true);
+    this.members.unlock(user.id).subscribe(this.observer(`${user.fullName} peut se reconnecter.`));
+  }
+
+  actionLabel(action: AccessLogEntry['action']): string {
+    return { VIEW: 'Consultation', CREATE: 'Création', UPDATE: 'Modification', DELETE: 'Suppression' }[action];
+  }
+
+  resourceLabel(resource: string): string {
+    const base = resource.split('/')[0];
+    return (
+      { patient: 'Dossier client', treatment: 'Traitement', procedure: 'Acte', photo: 'Photo', prescription: 'Ordonnance' }[
+        base
+      ] ?? resource
+    );
   }
 
   closeInvitation(): void {

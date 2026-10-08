@@ -75,6 +75,25 @@ public class ClientAuthService {
         return authenticated(account);
     }
 
+    /**
+     * Deletes the account with its details sent to cabinets and its appointment requests. Client files that a
+     * cabinet created from them belong to the cabinet's medical records and stay there; only the link is removed.
+     */
+    @Transactional
+    public void deleteAccount(Long accountId, String password) {
+        ClientAccount account = accounts.findById(accountId)
+                .orElseThrow(() -> new AuthenticationException("This account is no longer active."));
+        String key = "delete|" + accountId;
+        if (!failedLogins.isAllowed(key)) {
+            throw new TooManyRequestsException("Too many failed attempts. Try again in a few minutes.");
+        }
+        if (!PasswordHasher.matches(password == null ? "" : password, account.getPasswordHash())) {
+            failedLogins.tryAcquire(key);
+            throw new AuthenticationException("Incorrect password.");
+        }
+        accounts.delete(account);
+    }
+
     @Transactional(readOnly = true)
     public ClientDto.Account me(Long accountId) {
         return accounts.findById(accountId).filter(a -> Boolean.TRUE.equals(a.getActive())).map(this::toAccount)

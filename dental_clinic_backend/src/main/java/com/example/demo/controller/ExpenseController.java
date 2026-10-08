@@ -19,7 +19,6 @@ import com.example.demo.service.StaffActionService;
 import jakarta.validation.Valid;
 
 @RestController
-@CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200", "http://localhost:4201", "http://127.0.0.1:4201", "http://localhost:4202", "http://127.0.0.1:4202"})
 public class ExpenseController {
     private final ExpenseService expenseService;
     private final StaffActionService staffActionService;

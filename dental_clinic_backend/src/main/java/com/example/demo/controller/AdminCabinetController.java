@@ -17,7 +17,6 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/admin/cabinets")
-@CrossOrigin(origins = { "http://localhost:4200", "http://127.0.0.1:4200" })
 public class AdminCabinetController {
     private final CabinetAdminService cabinetService;
 

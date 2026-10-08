@@ -23,6 +23,18 @@ public final class PasswordHasher {
                 + Base64.getEncoder().encodeToString(derive(password, salt, ITERATIONS));
     }
 
+    public static boolean isHashed(String stored) {
+        return stored != null && stored.startsWith("pbkdf2$");
+    }
+
+    /** Verifies a password against a hash, or (for accounts not yet migrated) against the legacy plain value. */
+    public static boolean matchesStoredOrLegacy(String password, String stored) {
+        if (stored == null) return false;
+        if (isHashed(stored)) return matches(password, stored);
+        return MessageDigest.isEqual(password.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                stored.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     public static boolean matches(String password, String stored) {
         try {
             String[] parts = stored.split("\\$");

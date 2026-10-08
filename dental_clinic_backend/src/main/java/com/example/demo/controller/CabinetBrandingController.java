@@ -18,11 +18,13 @@ import jakarta.validation.Valid;
  * any cabinet through the {@code /api/admin/cabinets/{id}/branding} routes.
  */
 @RestController
-@CrossOrigin(origins = { "http://localhost:4200", "http://127.0.0.1:4200" })
 public class CabinetBrandingController {
     private final CabinetBrandingService brandingService;
+    private final com.example.demo.service.RecordAccessLogService accessLogService;
 
-    public CabinetBrandingController(CabinetBrandingService brandingService) {
+    public CabinetBrandingController(CabinetBrandingService brandingService,
+            com.example.demo.service.RecordAccessLogService accessLogService) {
+        this.accessLogService = accessLogService;
         this.brandingService = brandingService;
     }
 
@@ -75,6 +77,23 @@ public class CabinetBrandingController {
     public BrandingDto.Response delete(@PathVariable Long id, @PathVariable String kind, Principal principal) {
         admin(principal);
         return brandingService.deleteImage(id, kind);
+    }
+
+    // ------------------------------------------------------------------ access journal
+
+    @GetMapping("/api/manager/access-log")
+    public java.util.List<com.example.demo.dto.AccessLogDto.Entry> myAccessLog(
+            @RequestParam(defaultValue = "100") int limit, @RequestParam(defaultValue = "0") int offset,
+            Principal principal) {
+        return accessLogService.recent(manager(principal).requireCabinetId(), limit, offset);
+    }
+
+    @GetMapping("/api/admin/cabinets/{id}/access-log")
+    public java.util.List<com.example.demo.dto.AccessLogDto.Entry> accessLog(@PathVariable Long id,
+            @RequestParam(defaultValue = "100") int limit, @RequestParam(defaultValue = "0") int offset,
+            Principal principal) {
+        admin(principal);
+        return accessLogService.recent(id, limit, offset);
     }
 
     private ClinicPrincipal manager(Principal principal) {

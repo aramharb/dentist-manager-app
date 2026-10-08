@@ -111,6 +111,20 @@
         </ul>
       </section>
 
+      <section class="account-card" *ngIf="step() === 'cabinet'">
+        <button type="button" class="link" (click)="accountOpen = !accountOpen">{{ accountOpen ? 'Masquer' : 'Mon compte et mes données' }}</button>
+        <div *ngIf="accountOpen" class="account-body">
+          <p class="muted">Vos informations ne sont visibles que par vous et par les cabinets auxquels vous les avez envoyées.</p>
+          <button type="button" class="ghost" (click)="downloadMyData()">Télécharger mes données</button>
+          <div class="danger-zone">
+            <strong>Supprimer mon compte</strong>
+            <p class="muted">Votre compte, vos informations envoyées et vos demandes sont supprimés. Un dossier déjà créé par un cabinet reste dans ses archives médicales.</p>
+            <input type="password" name="deletePassword" [(ngModel)]="deletePassword" placeholder="Mot de passe" autocomplete="current-password" />
+            <button type="button" class="ghost danger" [disabled]="busy()" (click)="deleteMyAccount()">Supprimer mon compte</button>
+          </div>
+        </div>
+      </section>
+
       <!-- cabinet header for the next steps -->
       <header class="cabinet-banner" *ngIf="selected() as cabinet; else noCabinet" [hidden]="step() === 'cabinet'">
         <div class="banner-cover" [style.background-image]="cabinet.hasCover ? 'url(' + imageUrl(cabinet, 'cover') + ')' : null"></div>

@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +22,6 @@ import com.example.demo.service.UserAdminService;
 
 @RestController
 @RequestMapping("/api/admin/users")
-@CrossOrigin(origins = { "http://localhost:4200", "http://127.0.0.1:4200" })
 public class AdminUserController {
     private final UserAdminService userAdminService;
 
@@ -48,6 +46,13 @@ public class AdminUserController {
     public AdminUserDto.Response update(@PathVariable Long id, @RequestBody AdminUserDto.UpdateRequest request,
             Principal principal) {
         return userAdminService.update(id, request, requireAdmin(principal));
+    }
+
+    @PostMapping("/{id}/unlock")
+    public ResponseEntity<Void> unlock(@PathVariable Long id, Principal principal) {
+        requireAdmin(principal);
+        userAdminService.unlock(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/invitation")

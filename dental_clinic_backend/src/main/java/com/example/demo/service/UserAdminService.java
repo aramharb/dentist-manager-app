@@ -16,6 +16,8 @@ import com.example.demo.dto.InvitationDto;
 import com.example.demo.entity.Cabinet;
 import com.example.demo.entity.LoginUser;
 import com.example.demo.repository.CabinetRepository;
+import com.example.demo.security.PasswordHasher;
+import com.example.demo.security.SessionRegistry;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.LoginUserRepository;
 import com.example.demo.security.ClinicPrincipal;
@@ -29,9 +31,14 @@ public class UserAdminService {
     private final CabinetRepository cabinetRepository;
     private final JdbcTemplate jdbc;
     private final InvitationService invitationService;
+    private final LoginAttemptService loginAttempts;
+    private final SessionRegistry sessionRegistry;
 
     public UserAdminService(LoginUserRepository userRepository, CabinetRepository cabinetRepository,
-            JdbcTemplate jdbc, InvitationService invitationService) {
+            JdbcTemplate jdbc, InvitationService invitationService, LoginAttemptService loginAttempts,
+            SessionRegistry sessionRegistry) {
+        this.loginAttempts = loginAttempts;
+        this.sessionRegistry = sessionRegistry;
         this.invitationService = invitationService;
         this.userRepository = userRepository;
         this.cabinetRepository = cabinetRepository;
@@ -80,13 +87,16 @@ public class UserAdminService {
             assertCanLeaveCabinet(user);
         }
         assertSingleManager(user, role, active, cabinetId);
+        if (active) assertNoDuplicateName(user.getId(), fullName(request.fullName()), role, cabinetId);
 
+        boolean deactivated = Boolean.TRUE.equals(user.getActive()) && !active;
         user.setUsername(username);
         user.setFullName(fullName(request.fullName()));
         user.setRole(role);
         user.setCabinetId(cabinetId);
         user.setActive(active);
         LoginUser saved = userRepository.saveAndFlush(user);
+        if (deactivated) sessionRegistry.closeAll(saved.getId());
         seedDefaultWorkingHours(saved);
         return toResponse(saved);
     }
@@ -126,13 +136,28 @@ public class UserAdminService {
         }
         String role = role(request.role(), MEMBER_ROLES);
         if (!role.equals(user.getRole())) assertCanLeaveCabinet(user);
+        boolean active = request.active() == null ? Boolean.TRUE.equals(user.getActive()) : request.active();
+        if (active) assertNoDuplicateName(user.getId(), fullName(request.fullName()), role, cabinetId);
+        boolean deactivated = Boolean.TRUE.equals(user.getActive()) && !active;
         user.setUsername(username);
         user.setFullName(fullName(request.fullName()));
         user.setRole(role);
-        user.setActive(request.active() == null ? Boolean.TRUE.equals(user.getActive()) : request.active());
+        user.setActive(active);
         LoginUser saved = userRepository.saveAndFlush(user);
+        if (deactivated) sessionRegistry.closeAll(saved.getId());
         seedDefaultWorkingHours(saved);
         return toResponse(saved);
+    }
+
+    /** Lifts a sign-in lock on a member of the manager's cabinet. */
+    @Transactional
+    public void unlockMember(Long cabinetId, Long id) {
+        loginAttempts.unlock(findMember(cabinetId, id).getUsername());
+    }
+
+    @Transactional
+    public void unlock(Long id) {
+        loginAttempts.unlock(find(id).getUsername());
     }
 
     @Transactional
@@ -153,6 +178,7 @@ public class UserAdminService {
         userRepository.findByCabinetIdAndRoleIgnoreCaseAndActiveTrue(cabinetId, "manager").forEach(previous -> {
             previous.setActive(false);
             userRepository.save(previous);
+            sessionRegistry.closeAll(previous.getId());
         });
         userRepository.flush();
         return created(createUser(username, fullName, "manager", cabinetId), actor);
@@ -177,8 +203,9 @@ public class UserAdminService {
         user.setActive(true);
         // The owner chooses the real password through the invitation link; until then nobody
         // (including the admin or manager who created the account) knows a working password.
-        user.setPassword(UUID.randomUUID() + UUID.randomUUID().toString());
+        user.setPassword(PasswordHasher.hash(UUID.randomUUID() + UUID.randomUUID().toString()));
         assertSingleManager(user, role, true, cabinetId);
+        assertNoDuplicateName(null, user.getFullName(), role, cabinetId);
         LoginUser saved = userRepository.saveAndFlush(user);
         seedDefaultWorkingHours(saved);
         return saved;
@@ -196,6 +223,19 @@ public class UserAdminService {
                 && userRepository.countByCabinetIdAndRoleIgnoreCaseAndActiveTrue(cabinetId, "manager") > 0) {
             throw new BusinessRuleException(
                     "This cabinet already has an active manager. Replace it from the cabinet page.");
+        }
+    }
+
+    /** Two active accounts of the same role and name in one cabinet are almost surely the same person. */
+    private void assertNoDuplicateName(Long selfId, String fullName, String role, Long cabinetId) {
+        if (cabinetId == null) return;
+        boolean duplicate = selfId == null
+                ? userRepository.existsByCabinetIdAndRoleIgnoreCaseAndFullNameIgnoreCaseAndActiveTrue(cabinetId, role, fullName)
+                : userRepository.existsByCabinetIdAndRoleIgnoreCaseAndFullNameIgnoreCaseAndActiveTrueAndIdNot(
+                        cabinetId, role, fullName, selfId);
+        if (duplicate) {
+            throw new BusinessRuleException("An active " + role + " named \"" + fullName
+                    + "\" already exists in this cabinet. Use that account (send a new invitation link if needed).");
         }
     }
 
@@ -235,7 +275,7 @@ public class UserAdminService {
         return new AdminUserDto.Response(user.getId(), user.getUsername(), user.getFullName(), user.getRole(),
                 Boolean.TRUE.equals(user.getActive()), user.getCreatedAt(), user.getUpdatedAt(),
                 user.getCabinetId(), user.getCabinetId() == null ? null : cabinetNames.get(user.getCabinetId()),
-                invitationService.hasOpenInvitation(user.getId()));
+                invitationService.hasOpenInvitation(user.getId()), loginAttempts.isLocked(user.getUsername()));
     }
 
     /** A new doctor can receive appointments right away: Mon-Thu 08-17, Fri 08-15, weekend off. */

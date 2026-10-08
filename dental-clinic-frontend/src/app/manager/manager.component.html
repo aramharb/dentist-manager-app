@@ -24,11 +24,34 @@
     <nav class="tabs" aria-label="Sections">
       <button type="button" [class.active]="view() === 'team'" (click)="view.set('team')">Équipe</button>
       <button type="button" [class.active]="view() === 'identity'" (click)="view.set('identity')">Identité du cabinet</button>
+      <button type="button" [class.active]="view() === 'journal'" (click)="openJournal()">Journal d'accès</button>
     </nav>
 
     <section class="card identity-card" *ngIf="view() === 'identity'">
       <p class="hint">Logo, photo, couleur et nom du propriétaire : ils apparaissent dans l'espace client et dans votre espace de travail.</p>
       <app-branding-editor />
+    </section>
+
+    <section class="card" *ngIf="view() === 'journal'">
+      <p class="hint" style="padding: 16px 24px 0">
+        Qui a consulté ou modifié un dossier client ou un traitement de votre cabinet, et quand. Les {{ accessLog().length }} dernières actions.
+      </p>
+      <p class="empty" *ngIf="logLoading()">Chargement…</p>
+      <p class="empty" *ngIf="!logLoading() && !accessLog().length">Aucune activité enregistrée.</p>
+      <div class="table-wrap" *ngIf="accessLog().length">
+        <table>
+          <thead><tr><th>Date</th><th>Personne</th><th>Action</th><th>Élément</th><th>Adresse</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let entry of accessLog()">
+              <td class="muted">{{ entry.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
+              <td><strong>{{ entry.userName }}</strong> <small class="muted">{{ entry.userRole }}</small></td>
+              <td><span class="role-badge" [attr.data-role]="entry.action === 'VIEW' ? 'secretaire' : 'doctor'">{{ actionLabel(entry.action) }}</span></td>
+              <td>{{ resourceLabel(entry.resource) }}<span class="muted" *ngIf="entry.resourceId"> n° {{ entry.resourceId }}</span></td>
+              <td class="mono">{{ entry.clientAddress }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <ng-container *ngIf="view() === 'team'">
@@ -83,13 +106,14 @@
               <td class="mono">{{ user.username }}</td>
               <td><span class="role-badge" [attr.data-role]="user.role">{{ roleLabels[user.role] }}</span></td>
               <td>
-                <span class="status" [class.on]="user.active">
-                  {{ !user.active ? 'Inactive' : user.invitationPending ? 'Invited' : 'Active' }}
+                <span class="status" [class.on]="user.active && !user.locked">
+                  {{ !user.active ? 'Inactive' : user.locked ? 'Verrouillé' : user.invitationPending ? 'Invited' : 'Active' }}
                 </span>
               </td>
               <td class="actions-col">
                 <div class="row-actions">
                   <button class="ghost-button" type="button" (click)="openEdit(user)">Edit</button>
+                  <button class="ghost-button" type="button" *ngIf="user.locked" [disabled]="saving()" (click)="unlock(user)">Déverrouiller</button>
                   <button class="ghost-button" type="button" [disabled]="saving() || !user.active" (click)="sendInvitation(user)">
                     Invitation link
                   </button>

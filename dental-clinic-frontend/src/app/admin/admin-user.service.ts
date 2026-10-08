@@ -15,6 +15,19 @@ export interface AdminUser {
   cabinetName: string | null;
   /** The person has not chosen a password yet and still has a valid link. */
   invitationPending: boolean;
+  /** Too many failed sign-ins: the account is temporarily locked. */
+  locked: boolean;
+}
+
+export interface AccessLogEntry {
+  id: number;
+  userName: string;
+  userRole: string;
+  action: 'VIEW' | 'CREATE' | 'UPDATE' | 'DELETE';
+  resource: string;
+  resourceId: number | null;
+  clientAddress: string | null;
+  occurredAt: string;
 }
 
 export interface Invitation {
@@ -123,6 +136,10 @@ export class AdminUserService {
   invite(id: number): Observable<Invitation> {
     return this.http.post<Invitation>(`${ADMIN_USERS_API}/${id}/invitation`, {});
   }
+
+  unlock(id: number): Observable<void> {
+    return this.http.post<void>(`${ADMIN_USERS_API}/${id}/unlock`, {});
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -170,6 +187,14 @@ export class ManagerUserService {
 
   invite(id: number): Observable<Invitation> {
     return this.http.post<Invitation>(`${this.api}/${id}/invitation`, {});
+  }
+
+  unlock(id: number): Observable<void> {
+    return this.http.post<void>(`${this.api}/${id}/unlock`, {});
+  }
+
+  accessLog(limit = 200): Observable<AccessLogEntry[]> {
+    return this.http.get<AccessLogEntry[]>('/api/manager/access-log', { params: { limit } });
   }
 }
 

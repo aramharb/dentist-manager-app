@@ -9,7 +9,6 @@ import com.example.demo.service.InvitationService;
 /** Public endpoints (no login): the one-time token in the path is the credential. */
 @RestController
 @RequestMapping("/api/invitations")
-@CrossOrigin(origins = { "http://localhost:4200", "http://127.0.0.1:4200" })
 public class InvitationController {
     private final InvitationService invitationService;
 

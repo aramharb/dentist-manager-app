@@ -45,6 +45,7 @@ export class SessionLifecycleService {
   }
 
   logout(): void {
+    if (this.session.isAuthenticated) this.auth.logout().subscribe({ error: () => undefined });
     this.messages.disconnect();
     this.stopSynchronization();
     this.notifications.clear();

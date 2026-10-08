@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -23,6 +23,7 @@ export class LoginComponent implements OnInit {
   usernameError = '';
   passwordError = '';
   loginError = '';
+  private readonly cdr = inject(ChangeDetectorRef);
   usernameFocused = false;
   passwordFocused = false;
 
@@ -62,6 +63,7 @@ export class LoginComponent implements OnInit {
         next: (response) => {
           this.isLoading = false;
           this.isSuccess = true;
+          this.cdr.markForCheck();
 
           void this.router.navigateByUrl(this.destinationFor(response.role), { replaceUrl: true });
         },
@@ -71,13 +73,21 @@ export class LoginComponent implements OnInit {
           this.isSuccess = false;
           this.loginError = this.getLoginErrorMessage(error);
           this.triggerShake();
+          this.cdr.markForCheck();
         },
       });
   }
 
   private getLoginErrorMessage(error: HttpErrorResponse): string {
+    const messages = error.error?.messages;
+    if (Array.isArray(messages) && messages.length) {
+      return messages.join(' ');
+    }
     if (typeof error.error?.message === 'string') {
       return error.error.message;
+    }
+    if (error.status === 429) {
+      return 'Too many failed attempts. Please wait a few minutes before trying again.';
     }
 
     if (error.status === 0) {
@@ -101,6 +111,7 @@ export class LoginComponent implements OnInit {
     this.shakeCard = false;
     setTimeout(() => {
       this.shakeCard = true;
+      this.cdr.markForCheck();
     });
   }
 }

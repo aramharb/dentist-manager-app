@@ -17,6 +17,8 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.CabinetRepository;
 import com.example.demo.repository.LoginUserRepository;
 import com.example.demo.repository.UserInvitationRepository;
+import com.example.demo.security.PasswordHasher;
+import com.example.demo.security.SessionRegistry;
 
 /**
  * One-time links that let a person choose their own password, so no password has to be
@@ -24,19 +26,25 @@ import com.example.demo.repository.UserInvitationRepository;
  */
 @Service
 public class InvitationService {
-    static final int MIN_PASSWORD_LENGTH = 6;
+    static final int MIN_PASSWORD_LENGTH = 8;
     private static final long VALID_HOURS = 72;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UserInvitationRepository invitationRepository;
     private final LoginUserRepository userRepository;
     private final CabinetRepository cabinetRepository;
+    private SessionRegistry sessionRegistry;
 
     public InvitationService(UserInvitationRepository invitationRepository, LoginUserRepository userRepository,
             CabinetRepository cabinetRepository) {
         this.invitationRepository = invitationRepository;
         this.userRepository = userRepository;
         this.cabinetRepository = cabinetRepository;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setSessionRegistry(SessionRegistry sessionRegistry) {
+        this.sessionRegistry = sessionRegistry;
     }
 
     /** Creates a fresh link for the user; links created earlier stop working. */
@@ -71,8 +79,9 @@ public class InvitationService {
         }
         UserInvitation invitation = openInvitation(token);
         LoginUser user = invitation.getUser();
-        user.setPassword(password);
+        user.setPassword(PasswordHasher.hash(password));
         userRepository.save(user);
+        if (sessionRegistry != null) sessionRegistry.closeAll(user.getId());
         invitationRepository.closeOpenInvitations(user.getId(), LocalDateTime.now());
     }
 

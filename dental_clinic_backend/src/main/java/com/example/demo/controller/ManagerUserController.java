@@ -20,7 +20,6 @@ import com.example.demo.service.UserAdminService;
  */
 @RestController
 @RequestMapping("/api/manager/users")
-@CrossOrigin(origins = { "http://localhost:4200", "http://127.0.0.1:4200" })
 public class ManagerUserController {
     private final UserAdminService userService;
 
@@ -46,6 +45,12 @@ public class ManagerUserController {
     public AdminUserDto.Response update(@PathVariable Long id, @RequestBody AdminUserDto.MemberUpdateRequest request,
             Principal principal) {
         return userService.updateMember(requireManager(principal).requireCabinetId(), id, request);
+    }
+
+    @PostMapping("/{id}/unlock")
+    public ResponseEntity<Void> unlock(@PathVariable Long id, Principal principal) {
+        userService.unlockMember(requireManager(principal).requireCabinetId(), id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/invitation")

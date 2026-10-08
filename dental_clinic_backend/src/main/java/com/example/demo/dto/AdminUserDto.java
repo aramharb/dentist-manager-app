@@ -6,7 +6,7 @@ public class AdminUserDto {
     /** {@code invitationPending}: the person has not chosen a password yet and still has a valid link. */
     public record Response(Long id, String username, String fullName, String role, boolean active,
             LocalDateTime createdAt, LocalDateTime updatedAt, Long cabinetId, String cabinetName,
-            boolean invitationPending) {}
+            boolean invitationPending, boolean locked) {}
 
     /** The account plus the one-time link its owner uses to choose a password. */
     public record Created(Response user, InvitationDto.Created invitation) {}

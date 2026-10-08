@@ -32,6 +32,19 @@ public class PatientService {
     private final TreatmentRepository treatmentRepository;
     private final LoginUserRepository userRepository;
     private final AppointmentRepository appointmentRepository;
+    private DuplicateClientGuard duplicateGuard;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setDuplicateGuard(DuplicateClientGuard duplicateGuard) {
+        this.duplicateGuard = duplicateGuard;
+    }
+
+    private void assertNotDuplicate(PatientRequest request, Long excludedPatientId) {
+        if (duplicateGuard != null) {
+            duplicateGuard.assertNoDuplicate(com.example.demo.tenant.CabinetContext.current(), request.getFirstName(),
+                    request.getLastName(), request.getPhoneNumber(), excludedPatientId);
+        }
+    }
 
     public PatientService(PatientRepository patientRepository, ProcedureCatalogRepository procedureCatalogRepository,
             TreatmentRepository treatmentRepository, LoginUserRepository userRepository,
@@ -70,6 +83,7 @@ public class PatientService {
     @Transactional
     public PatientResponse create(PatientRequest request, ClinicPrincipal actor) {
         requireStaff(actor);
+        assertNotDuplicate(request, null);
         Patient patient = new Patient();
         patient.setAssignedDoctor(resolveAssignedDoctor(request.getAssignedDoctorUserId(), actor));
         applyRequest(patient, request);
@@ -90,6 +104,7 @@ public class PatientService {
             throw new DuplicatePatientNumberException(requestedNumber);
         }
 
+        assertNotDuplicate(request, id);
         patient.setAssignedDoctor(resolveAssignedDoctor(request.getAssignedDoctorUserId(), actor));
         applyRequest(patient, request);
         if (StringUtils.hasText(requestedNumber)) {

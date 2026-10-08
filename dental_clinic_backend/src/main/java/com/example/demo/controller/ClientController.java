@@ -22,7 +22,6 @@ import jakarta.validation.Valid;
 
 /** Public cabinet pages and the client (patient) space. */
 @RestController
-@CrossOrigin(origins = { "http://localhost:4200", "http://127.0.0.1:4200" })
 public class ClientController {
     private final ClientAuthService authService;
     private final ClientPortalService portalService;
@@ -75,6 +74,24 @@ public class ClientController {
     @GetMapping("/api/client/me")
     public ClientDto.Account me(Principal principal) {
         return authService.me(accountId(principal));
+    }
+
+    /** Right of access: a download of everything held about the signed-in client. */
+    @GetMapping("/api/client/me/export")
+    public ResponseEntity<ClientDto.Export> export(Principal principal) {
+        Long id = accountId(principal);
+        ClientDto.Export export = new ClientDto.Export(java.time.LocalDateTime.now(), authService.me(id),
+                portalService.memberships(id), portalService.myRequests(id));
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"my-data.json\"")
+                .body(export);
+    }
+
+    /** Right to erasure: removes the account (confirmed with the password). */
+    @DeleteMapping("/api/client/me")
+    public ResponseEntity<Void> deleteMe(@Valid @RequestBody ClientDto.DeleteAccountRequest request, Principal principal) {
+        authService.deleteAccount(accountId(principal), request.password());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/api/client/memberships")

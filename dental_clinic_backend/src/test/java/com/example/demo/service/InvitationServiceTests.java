@@ -62,7 +62,7 @@ class InvitationServiceTests {
 
         service.accept("token", "my-new-password");
 
-        assertEquals("my-new-password", user.getPassword());
+        assertTrue(com.example.demo.security.PasswordHasher.matches("my-new-password", user.getPassword()));
         verify(users).save(user);
     }
 

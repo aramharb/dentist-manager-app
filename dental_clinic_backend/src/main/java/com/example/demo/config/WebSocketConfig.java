@@ -27,9 +27,12 @@ import com.example.demo.service.UserPresenceService;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final JwtTokenService tokenService;
     private final ThreadPoolTaskScheduler heartbeatScheduler;
+    private final String[] allowedOrigins;
 
     public WebSocketConfig(JwtTokenService tokenService,
-            @Qualifier("presenceHeartbeatScheduler") ThreadPoolTaskScheduler heartbeatScheduler) {
+            @Qualifier("presenceHeartbeatScheduler") ThreadPoolTaskScheduler heartbeatScheduler,
+            @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:http://localhost:4200,http://127.0.0.1:4200}") String[] allowedOrigins) {
+        this.allowedOrigins = allowedOrigins;
         this.tokenService = tokenService;
         this.heartbeatScheduler = heartbeatScheduler;
     }
@@ -54,7 +57,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*");
+                .setAllowedOrigins(allowedOrigins);
     }
 
     private static boolean isOwnPresenceTopic(StompHeaderAccessor accessor) {

@@ -256,6 +256,10 @@ export class AdminComponent implements OnInit {
     this.load();
   }
 
+  unlock(user: AdminUser): void {
+    this.save(this.users.unlock(user.id), `${user.fullName} can sign in again.`);
+  }
+
   openReplaceManager(cabinet: Cabinet): void {
     this.selectedCabinet = cabinet;
     this.cabinetForm = { ...this.emptyCabinetForm(), name: cabinet.name };

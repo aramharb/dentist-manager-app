@@ -14,6 +14,8 @@ import com.example.demo.entity.Cabinet;
 import com.example.demo.repository.CabinetRepository;
 import com.example.demo.repository.LoginUserRepository;
 import com.example.demo.security.ClinicPrincipal;
+import com.example.demo.security.PasswordHasher;
+import com.example.demo.security.SessionRegistry;
 import com.example.demo.security.JwtTokenService;
 
 @Service
@@ -22,36 +24,58 @@ public class AuthService {
     private final JwtTokenService tokenService;
     private final UserPresenceService presenceService;
     private final CabinetRepository cabinetRepository;
+    private final LoginAttemptService loginAttempts;
+    private final SessionRegistry sessionRegistry;
+    private static final String DUMMY_HASH = PasswordHasher.hash("not-a-real-password");
 
     public AuthService(LoginUserRepository userRepository, JwtTokenService tokenService,
-            UserPresenceService presenceService, CabinetRepository cabinetRepository) {
+            UserPresenceService presenceService, CabinetRepository cabinetRepository,
+            LoginAttemptService loginAttempts, SessionRegistry sessionRegistry) {
+        this.loginAttempts = loginAttempts;
+        this.sessionRegistry = sessionRegistry;
         this.cabinetRepository = cabinetRepository;
         this.userRepository = userRepository;
         this.tokenService = tokenService;
         this.presenceService = presenceService;
     }
 
-    @Transactional(readOnly = true)
-    public LoginResponse login(LoginRequest request) {
+    @Transactional
+    public LoginResponse login(LoginRequest request, String clientAddress) {
         String username = normalize(request.getUsername());
         String password = request.getPassword() == null ? "" : request.getPassword();
         if (username.isBlank() || password.isBlank()) {
             throw new IllegalArgumentException("Username and password are required.");
         }
-        LoginUser user = userRepository.findByUsernameIgnoreCaseAndActiveTrue(username)
-                .filter(candidate -> candidate.getPassword().equals(password))
-                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password."));
+        loginAttempts.ensureAllowed(username, clientAddress);
+        LoginUser user = userRepository.findByUsernameIgnoreCaseAndActiveTrue(username).orElse(null);
+        // Always do one hash verification, so response time does not tell whether the username exists.
+        boolean valid = PasswordHasher.matchesStoredOrLegacy(password, user == null ? DUMMY_HASH : user.getPassword());
+        if (user == null || !valid) {
+            loginAttempts.recordFailure(username, clientAddress);
+            throw new IllegalArgumentException("Invalid username or password.");
+        }
         Cabinet cabinet = cabinetOf(user);
         if (cabinet != null && !Boolean.TRUE.equals(cabinet.getActive())) {
             throw new IllegalArgumentException("Your cabinet is disabled. Contact the administrator.");
         }
+        loginAttempts.recordSuccess(username);
+        if (!PasswordHasher.isHashed(user.getPassword())) {
+            // Accounts created before passwords were hashed are upgraded on their next successful sign-in.
+            user.setPassword(PasswordHasher.hash(password));
+            userRepository.save(user);
+        }
         LoginResponse response = new LoginResponse(user.getId(), user.getUsername(), user.getFullName(),
-                user.getRole(), tokenService.issue(user), "Login successful.");
+                user.getRole(), tokenService.issue(user, clientAddress), "Login successful.");
         if (cabinet != null) {
             response.setCabinetId(cabinet.getId());
             response.setCabinetName(cabinet.getName());
         }
         return response;
+    }
+
+    /** Ends the caller's session: the token stops working immediately. */
+    public void logout(ClinicPrincipal principal) {
+        sessionRegistry.close(principal.sessionId());
     }
 
     @Transactional(readOnly = true)

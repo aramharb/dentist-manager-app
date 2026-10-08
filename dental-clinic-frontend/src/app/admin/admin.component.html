@@ -173,12 +173,13 @@
               <td><span class="role-badge" [attr.data-role]="user.role">{{ roleLabels[user.role] }}</span></td>
               <td>{{ user.cabinetName ?? '—' }}</td>
               <td>
-                <span class="status" [class.on]="user.active">{{ user.active ? 'Active' : 'Inactive' }}</span>
+                <span class="status" [class.on]="user.active && !user.locked">{{ !user.active ? 'Inactive' : user.locked ? 'Locked' : 'Active' }}</span>
               </td>
               <td class="muted">{{ user.updatedAt | date: 'medium' }}</td>
               <td class="actions-col">
                 <div class="row-actions">
                   <button class="ghost-button" type="button" (click)="openEdit(user)">Edit</button>
+                  <button class="ghost-button" type="button" *ngIf="user.locked" [disabled]="saving()" (click)="unlock(user)">Unlock</button>
                   <button class="ghost-button" type="button" [disabled]="saving() || !user.active" (click)="sendInvitation(user)">
                     Invitation link
                   </button>

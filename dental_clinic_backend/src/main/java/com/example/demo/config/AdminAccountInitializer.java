@@ -44,7 +44,7 @@ public class AdminAccountInitializer implements ApplicationRunner {
         admin.setUsername(username);
         admin.setFullName("Administrator");
         admin.setRole("admin");
-        admin.setPassword(password);
+        admin.setPassword(com.example.demo.security.PasswordHasher.hash(password));
         admin.setActive(true);
         userRepository.save(admin);
         log.info("Created admin account \"{}\".", username);

@@ -189,6 +189,15 @@ export class ClientApiService {
     return this.http.get<MyRequest[]>('/api/client/requests');
   }
 
+  /** The full data export (right of access), as the raw JSON text so it can be saved as a file. */
+  exportData(): Observable<string> {
+    return this.http.get('/api/client/me/export', { responseType: 'text' });
+  }
+
+  deleteAccount(password: string): Observable<void> {
+    return this.http.request<void>('DELETE', '/api/client/me', { body: { password } });
+  }
+
   cancel(requestId: number): Observable<void> {
     return this.http.post<void>(`/api/client/requests/${requestId}/cancel`, {});
   }

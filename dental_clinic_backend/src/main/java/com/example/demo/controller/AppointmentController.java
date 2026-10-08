@@ -18,7 +18,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200", "http://localhost:4201", "http://127.0.0.1:4201", "http://localhost:4202", "http://127.0.0.1:4202"})
 public class AppointmentController {
     private final AppointmentService appointmentService;
     private final StaffActionService staffActionService;

@@ -29,6 +29,7 @@ public class JwtTokenService {
     private final ObjectMapper objectMapper;
     private final LoginUserRepository userRepository;
     private final ClientAccountRepository clientRepository;
+    private SessionRegistry sessionRegistry;
     private final byte[] secret;
     private final long lifetimeSeconds;
 
@@ -54,21 +55,28 @@ public class JwtTokenService {
     }
 
     public String issue(LoginUser user) {
-        return sign(user.getUsername(), user.getId(), user.getRole(), null);
+        return issue(user, null);
+    }
+
+    /** Issues a token bound to a new server-side session (inactivity timeout, revocation, device cap). */
+    public String issue(LoginUser user, String clientAddress) {
+        String sessionId = sessionRegistry == null ? null : sessionRegistry.open(user.getId(), clientAddress);
+        return sign(user.getUsername(), user.getId(), user.getRole(), null, sessionId);
     }
 
     /** Token of a client (patient) account; it only opens the /api/client endpoints. */
     public String issueClient(ClientAccount account) {
-        return sign(account.getPhone(), account.getId(), ClinicPrincipal.CLIENT_ROLE, CLIENT_KIND);
+        return sign(account.getPhone(), account.getId(), ClinicPrincipal.CLIENT_ROLE, CLIENT_KIND, null);
     }
 
-    private String sign(String subject, Long id, String role, String kind) {
+    private String sign(String subject, Long id, String role, String kind, String sessionId) {
         long issuedAt = Instant.now().getEpochSecond();
         Map<String, Object> claims = new LinkedHashMap<>();
         claims.put("sub", subject);
         claims.put("uid", id);
         claims.put("role", role);
         if (kind != null) claims.put("kind", kind);
+        if (sessionId != null) claims.put("jti", sessionId);
         claims.put("iat", issuedAt);
         claims.put("exp", issuedAt + lifetimeSeconds);
         try {
@@ -114,12 +122,22 @@ public class JwtTokenService {
             if (user.getCabinetId() != null && !userRepository.isCabinetActive(user.getCabinetId())) {
                 throw invalidToken();
             }
-            return new ClinicPrincipal(user.getId(), user.getUsername(), user.getRole(), user.getCabinetId());
+            String sessionId = claims.path("jti").asText("");
+            if (sessionRegistry != null && !sessionRegistry.touch(sessionId, user.getId())) {
+                throw invalidToken();
+            }
+            return new ClinicPrincipal(user.getId(), user.getUsername(), user.getRole(), user.getCabinetId(),
+                    sessionId.isBlank() ? null : sessionId);
         } catch (AuthenticationException exception) {
             throw exception;
         } catch (Exception exception) {
             throw invalidToken();
         }
+    }
+
+    @Autowired(required = false)
+    void setSessionRegistry(SessionRegistry sessionRegistry) {
+        this.sessionRegistry = sessionRegistry;
     }
 
     private byte[] sign(String value) throws Exception {

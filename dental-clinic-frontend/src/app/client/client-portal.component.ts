@@ -107,6 +107,39 @@ export class ClientPortalComponent implements OnInit {
     });
   }
 
+  accountOpen = false;
+  deletePassword = '';
+
+  downloadMyData(): void {
+    this.api.exportData().subscribe({
+      next: (json) => {
+        const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'mes-donnees.json';
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (error: HttpErrorResponse) => this.fail(error),
+    });
+  }
+
+  deleteMyAccount(): void {
+    this.error.set('');
+    if (!this.deletePassword) return this.error.set('Entrez votre mot de passe pour confirmer.');
+    if (typeof window !== 'undefined' && !window.confirm('Supprimer définitivement votre compte et vos demandes ?')) return;
+    this.busy.set(true);
+    this.api.deleteAccount(this.deletePassword).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.deletePassword = '';
+        this.accountOpen = false;
+        this.logout();
+      },
+      error: (error: HttpErrorResponse) => this.fail(error),
+    });
+  }
+
   logout(): void {
     this.session.clear();
     this.memberships.set([]);

@@ -111,6 +111,12 @@ public class BookingRequestService {
             Long exists = jdbc.queryForObject("select count(*) from patient where id = ? and cabinet_id = ?",
                     Long.class, body.patientId(), cabinetId);
             if (exists == null || exists == 0) throw new ResourceNotFoundException("Patient", body.patientId());
+            Long linkedElsewhere = jdbc.queryForObject(
+                    "select count(*) from client_membership where cabinet_id = ? and patient_id = ? and id <> ?",
+                    Long.class, cabinetId, body.patientId(), membershipId);
+            if (linkedElsewhere != null && linkedElsewhere > 0) {
+                throw new BusinessRuleException("This client file is already linked to another online account.");
+            }
             patientId = body.patientId();
         } else {
             PatientRequest newPatient = new PatientRequest();
