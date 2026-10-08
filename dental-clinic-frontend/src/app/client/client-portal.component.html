@@ -126,6 +126,10 @@
       </header>
       <ng-template #noCabinet></ng-template>
 
+      <div class="step-indicator" *ngIf="step() !== 'cabinet' && step() !== 'done'" aria-hidden="true">
+        <i class="on"></i><i [class.on]="step() !== 'details'"></i><i [class.on]="step() === 'time'"></i>
+      </div>
+
       <!-- step: my details -->
       <section class="step-card" *ngIf="step() === 'details'">
         <h2>2. Vos informations</h2>

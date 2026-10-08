@@ -3,10 +3,10 @@
 .eyebrow { margin: 0 0 6px; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; font-weight: 900; }
 .page-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 h1, h2, h3, p { margin-top: 0; }
-h1 { font-size: clamp(28px, 4vw, 44px); margin-bottom: 0; }
-.page-subtitle { max-width: 760px; margin: 8px 0 0; color: var(--muted); line-height: 1.6; }
+h1 { font-size: clamp(24px, 3vw, 32px); margin-bottom: 0; }
+.page-subtitle { max-width: 720px; margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .summary-grid, .material-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
-.summary-card, .material-card, .panel { border: 1px solid rgba(220,233,243,0.95); background: rgba(255,255,255,0.9); border-radius: 24px; box-shadow: var(--shadow); backdrop-filter: blur(14px); padding: 18px; }
+.summary-card, .material-card, .panel { border: 1px solid rgba(220,233,243,0.95); background: rgba(255,255,255,0.9); border-radius: 18px; box-shadow: var(--shadow-sm); padding: 18px; }
 .summary-card span, .summary-card small, dt, .material-card p { color: var(--muted); }
 .summary-card strong { display: block; font-size: 28px; margin: 7px 0; }
 .summary-card.amber strong, .summary-card.amber span { color: var(--amber); }
@@ -15,7 +15,7 @@ h1 { font-size: clamp(28px, 4vw, 44px); margin-bottom: 0; }
 .material-notice { margin-bottom: 16px; padding: 12px 14px; border-radius: 14px; font-weight: 800; }
 .material-notice.success { border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; }
 .material-notice.error { border: 1px solid #fecaca; background: #fff1f2; color: #b91c1c; }
-.search-input, select, input, textarea { width: 100%; border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; background: white; color: var(--text); outline: none; }
+.search-input, select, input, textarea { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; background: white; color: var(--text); outline: none; }
 .toolbar .search-input { flex: 1 1 280px; }
 .toolbar select { width: auto; min-width: 170px; }
 .material-card { transition: transform 0.25s ease; }
@@ -28,8 +28,8 @@ h1 { font-size: clamp(28px, 4vw, 44px); margin-bottom: 0; }
 .stock-meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), var(--cyan)); border-radius: inherit; }
 .material-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 dd { margin: 3px 0 0; font-weight: 800; }
-.primary-button, .ghost-button { border: 0; border-radius: 16px; padding: 11px 15px; font-weight: 800; transition: transform 0.2s ease; }
-.primary-button { background: linear-gradient(135deg, var(--primary), var(--cyan)); color: white; box-shadow: 0 12px 28px rgba(22,137,232,0.24); }
+.primary-button, .ghost-button { border: 0; border-radius: 12px; padding: 10px 16px; min-height: 42px; font-weight: 700; transition: transform 0.15s ease, filter 0.15s ease; }
+.primary-button { background: linear-gradient(135deg, var(--primary), var(--cyan)); color: white; box-shadow: 0 6px 16px rgba(22,137,232,0.22); }
 .ghost-button { background: rgba(238,246,251,0.9); color: var(--primary-dark); }
 .primary-button:hover, .ghost-button:hover { transform: translateY(-2px); }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
@@ -53,3 +53,16 @@ dd { margin: 3px 0 0; font-weight: 800; }
 @keyframes pageRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 1220px) { .summary-grid, .material-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .page-title, .toolbar, .section-heading, .form-actions { flex-direction: column; align-items: stretch; } .summary-grid, .material-grid, .material-card dl, .form-grid { grid-template-columns: 1fr; } .toolbar select { width: 100%; } }
+
+/* modern: lighter page chrome on small screens */
+@media (max-width: 700px) {
+  .breadcrumb { display: none; }
+  .page-title { gap: 12px; margin-bottom: 16px; }
+  .page-title .primary-button { width: 100%; }
+}
+
+/* modern: stacked toolbar controls keep their natural height */
+@media (max-width: 900px) {
+  .toolbar > * { flex: none !important; width: 100%; }
+  .toolbar select { width: 100%; }
+}

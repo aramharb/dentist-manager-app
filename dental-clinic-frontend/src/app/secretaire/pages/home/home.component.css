@@ -3,12 +3,12 @@
 .eyebrow { margin: 0 0 6px; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; font-weight: 900; }
 .page-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .page-title h1, h1, h2, h3, p { margin-top: 0; }
-h1 { font-size: clamp(28px, 4vw, 44px); margin-bottom: 0; }
-.page-subtitle { max-width: 760px; margin: 8px 0 0; color: var(--muted); line-height: 1.6; }
+h1 { font-size: clamp(24px, 3vw, 32px); margin-bottom: 0; }
+.page-subtitle { max-width: 720px; margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .primary-button { border: 0; border-radius: 16px; padding: 11px 15px; font-weight: 800; background: linear-gradient(135deg, var(--primary), var(--cyan)); color: white; box-shadow: 0 12px 28px rgba(22, 137, 232, 0.24); transition: transform 0.2s ease; }
 .primary-button:hover { transform: translateY(-2px); }
 .stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
-.stat-card, .panel { border: 1px solid rgba(220, 233, 243, 0.95); background: rgba(255,255,255,0.9); border-radius: 24px; box-shadow: var(--shadow); backdrop-filter: blur(14px); }
+.stat-card, .panel { border: 1px solid rgba(220, 233, 243, 0.95); background: rgba(255,255,255,0.9); border-radius: 18px; box-shadow: var(--shadow-sm); }
 .stat-card { position: relative; overflow: hidden; padding: 20px; }
 .stat-card span, .stat-card small { color: var(--muted); }
 .stat-card strong { display: block; font-size: 34px; margin: 8px 0; }
@@ -47,3 +47,10 @@ h1 { font-size: clamp(28px, 4vw, 44px); margin-bottom: 0; }
 @media (max-width: 1220px) { .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dashboard-grid { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .page-title, .section-heading { flex-direction: column; align-items: stretch; } .stat-grid, .quick-actions, .expense-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+/* modern: lighter page chrome on small screens */
+@media (max-width: 700px) {
+  .breadcrumb { display: none; }
+  .page-title { gap: 12px; margin-bottom: 16px; }
+  .page-title .primary-button { width: 100%; }
+}

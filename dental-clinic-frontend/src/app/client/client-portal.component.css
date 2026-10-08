@@ -92,3 +92,163 @@ button.cabinet-card:hover { transform: translateY(-3px); box-shadow: 0 16px 36px
   .portal-top { padding: 12px 16px; }
   .portal-main { padding: 4px 16px 48px; }
 }
+
+/* =====================================================================
+   Modern layer
+   ===================================================================== */
+.portal-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  max-width: none;
+  padding: 12px max(20px, calc((100% - 1080px) / 2));
+  border-bottom: 1px solid var(--line, #dce9f3);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+}
+
+.portal-mark,
+.avatar {
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.auth-card,
+.step-card,
+.cabinet-card,
+.cabinet-banner,
+.requests li,
+.doctor {
+  box-shadow: var(--shadow-sm, 0 4px 14px rgba(24, 83, 120, 0.06));
+}
+
+.auth-card {
+  border-radius: 20px;
+}
+
+.primary,
+.ghost {
+  min-height: 44px;
+}
+
+.primary {
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.times button {
+  min-height: 44px;
+  min-width: 72px;
+}
+
+.cabinet-banner {
+  border-radius: 20px;
+}
+
+@media (max-width: 640px) {
+  .portal-top {
+    padding: 10px 14px;
+  }
+
+  .portal-brand small,
+  .portal-user small {
+    display: none;
+  }
+
+  .portal-user {
+    gap: 8px;
+  }
+
+  .portal-user .ghost {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .cabinet-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .banner-body {
+    padding: 0 16px 14px;
+  }
+
+  .banner-body .logo {
+    width: 60px;
+    height: 60px;
+    margin-top: -30px;
+  }
+
+  .banner-body h1 {
+    font-size: 20px;
+  }
+
+  .week-nav {
+    justify-content: center;
+  }
+
+  .week-nav > span {
+    order: -1;
+    width: 100%;
+    text-align: center;
+  }
+
+  .week-nav .ghost {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .times button {
+    flex: 1 0 calc(25% - 8px);
+    min-width: 0;
+    padding: 10px 4px;
+  }
+
+  .doctor-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .requests li {
+    padding: 12px 14px;
+  }
+
+  .request-side {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .actions {
+    justify-content: stretch;
+  }
+
+  .actions .primary,
+  .actions .ghost {
+    flex: 1;
+  }
+}
+
+.step-indicator {
+  display: flex;
+  gap: 6px;
+  margin: 18px 0 4px;
+}
+
+.step-indicator i {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line, #dce9f3);
+}
+
+.step-indicator i.on {
+  background: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .portal-top {
+    flex-wrap: nowrap;
+  }
+
+  .portal-user > div {
+    display: none;
+  }
+}

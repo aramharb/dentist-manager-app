@@ -101,7 +101,7 @@ h1 {
 
 .stat-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px;
 }
 
@@ -525,4 +525,148 @@ tr.inactive td.actions-col {
   height: 14px;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+/* =====================================================================
+   Modern layer: flat top bar, cleaner cards, scrollable tables.
+   ===================================================================== */
+.admin-topbar {
+  width: 100%;
+  max-width: none;
+  padding: 12px 28px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
+}
+
+.admin-topbar h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.avatar {
+  border-radius: 12px;
+}
+
+.admin-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 28px 56px;
+}
+
+.card,
+.stat-strip article {
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: none;
+}
+
+.stat-strip strong {
+  font-size: 1.8rem;
+  letter-spacing: -0.02em;
+}
+
+.cabinet-card {
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.cabinet-card .row-actions {
+  gap: 6px;
+}
+
+.cabinet-card .ghost-button {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs button {
+  flex: none;
+  min-height: 42px;
+  box-shadow: none;
+}
+
+table {
+  min-width: 640px;
+}
+
+@media (max-width: 760px) {
+  .admin-topbar {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .admin-topbar .eyebrow {
+    display: none;
+  }
+
+  .admin-topbar h1 {
+    font-size: 1.05rem;
+  }
+
+  .topbar-actions {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .profile > div {
+    display: none;
+  }
+
+  .admin-content {
+    padding: 16px 14px 40px;
+  }
+
+  .cabinet-grid {
+    padding: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .card-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card-toolbar .primary-button,
+  .card-toolbar .search,
+  .card-toolbar select,
+  .card-toolbar .hint {
+    flex: none !important;
+    width: 100%;
+  }
+
+  .stat-strip strong {
+    font-size: 1.5rem;
+  }
+}
+
+.admin-content,
+.admin-content > *,
+.card {
+  min-width: 0;
+}
+
+.table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 760px) {
+  .stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

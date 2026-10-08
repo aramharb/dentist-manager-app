@@ -25,6 +25,12 @@
       <app-secretary-nav-item *ngFor="let item of navItems" [icon]="item.icon" [label]="item.label" [link]="item.link" (navigate)="navigate($event)" />
     </nav>
 
+    <div class="sidebar-tools">
+      <button class="chip-button" type="button" (click)="toggleTheme()"><app-clinic-icon name="moon"></app-clinic-icon><span>{{ darkMode ? 'Light' : 'Dark' }}</span></button>
+      <app-language-switcher />
+      <button class="chip-button" type="button" (click)="logout()"><span>Log out</span></button>
+    </div>
+
     <div class="sidebar-card support">
       <p class="eyebrow">Owner</p>
       <strong>{{ doctor.fullName }}</strong>
@@ -80,7 +86,7 @@
     </header>
 
     <main class="content">
-      <section class="doctor-stat-strip" aria-label="Live doctor indicators">
+      <section class="doctor-stat-strip" aria-label="Live doctor indicators" *ngIf="showStats">
         <article class="summary-card" *ngFor="let stat of stats">
           <span>{{ stat.label }}</span>
           <strong>{{ stat.value }}</strong>
@@ -134,8 +140,12 @@
     </div>
   </aside>
 
-  <nav class="mobile-bottom-nav">
-    <app-secretary-nav-item *ngFor="let item of navItems.slice(0, 5)" [icon]="item.icon" [label]="item.label" [link]="item.link" (navigate)="navigate($event)" />
+  <nav class="mobile-bottom-nav" aria-label="Main navigation">
+    <app-secretary-nav-item *ngFor="let item of navItems.slice(0, 4)" [icon]="item.icon" [label]="item.label" [link]="item.link" (navigate)="navigate($event)" />
+    <button type="button" class="menu-nav-item" (click)="mobileMenuOpen = true" aria-label="Open menu">
+      <app-clinic-icon name="menu"></app-clinic-icon>
+      <span>Menu</span>
+    </button>
   </nav>
 
 </div>

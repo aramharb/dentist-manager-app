@@ -396,6 +396,17 @@ form{ display:flex; flex-direction:column; gap:20px; }
   .brandmark{ top:20px; left:24px; }
 }
 
+@media (max-width: 640px){
+  .stage{ min-height:100dvh; }
+  .panel-left{ padding:56px 20px 4px; }
+  .illustration-wrap{ width:96px; margin:0 auto; }
+  .left-copy{ display:none; }
+  .floaters{ display:none; }
+  .panel-right{ padding:12px 14px 28px; }
+  .card{ padding:26px 20px 24px; border-radius:22px; }
+  .login-language{ top:12px; right:12px; }
+}
+
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{
     animation-duration:.01ms !important;

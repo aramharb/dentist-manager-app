@@ -1,34 +1,5 @@
 @import '../secretaire/secretaire.css';
 
-.doctor-shell .topbar {
-  grid-template-columns: minmax(260px, .9fr) minmax(340px, 1.2fr) auto;
-  gap: 20px;
-  padding: 16px 22px;
-}
-
-.doctor-shell .hero-copy {
-  min-width: 0;
-}
-
-.doctor-shell .hero-copy h1 {
-  margin-bottom: 3px;
-  font-size: clamp(1.55rem, 2vw, 2rem);
-  line-height: 1.08;
-}
-
-.doctor-shell .hero-copy p:last-child {
-  max-width: 460px;
-  line-height: 1.35;
-}
-
-.doctor-shell .search-shell {
-  min-width: 0;
-}
-
-.doctor-shell .topbar-actions {
-  flex-wrap: nowrap;
-}
-
 .language-chip {
   display: inline-flex;
   align-items: center;
@@ -39,17 +10,6 @@
   color: var(--primary-dark);
   background: rgba(237, 246, 253, .95);
   font-weight: 800;
-}
-
-.doctor-shell .profile {
-  min-width: max-content;
-}
-
-.doctor-shell .profile small {
-  display: block;
-  max-width: 205px;
-  margin-top: 3px;
-  white-space: nowrap;
 }
 
 .doctor-shell .logo,
@@ -222,78 +182,44 @@
   text-align: center;
 }
 
-@media (max-width: 1500px) {
-  .doctor-shell .topbar {
-    grid-template-columns: minmax(250px, 1fr) auto;
-  }
 
-  .doctor-shell .search-shell {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
+/* Stat strip: compact tiles; a swipeable row on small screens. */
+.doctor-stat-strip .summary-card {
+  min-height: 96px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
 
-  .doctor-shell .topbar-actions {
-    grid-column: 2;
-    grid-row: 1;
-  }
+.doctor-stat-strip .summary-card strong {
+  color: var(--text);
 }
 
 @media (max-width: 1220px) {
   .doctor-stat-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-
-  .doctor-shell .topbar-actions {
-    justify-content: end;
-  }
 }
 
 @media (max-width: 900px) {
-  .doctor-shell .topbar {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .doctor-shell .hamburger {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .doctor-shell .hero-copy {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .doctor-shell .search-shell,
-  .doctor-shell .topbar-actions {
-    grid-column: 1 / -1;
-  }
-
-  .doctor-shell .search-shell {
-    grid-row: 2;
-  }
-
-  .doctor-shell .topbar-actions {
-    grid-row: 3;
-    justify-content: start;
-  }
-}
-
-@media (max-width: 760px) {
   .doctor-stat-strip {
-    grid-template-columns: 1fr;
+    display: flex;
+    gap: 10px;
+    margin: 0 -14px 16px;
+    padding: 0 14px 6px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
   }
 
-  .doctor-shell .topbar-actions {
-    display: grid;
-    grid-template-columns: repeat(4, auto);
-    width: 100%;
+  .doctor-stat-strip::-webkit-scrollbar {
+    display: none;
   }
 
-  .doctor-shell .profile {
-    grid-column: 1 / -1;
-  }
-
-  .doctor-shell .profile small {
-    white-space: normal;
+  .doctor-stat-strip .summary-card {
+    flex: 0 0 150px;
+    min-height: 88px;
+    scroll-snap-align: start;
   }
 }

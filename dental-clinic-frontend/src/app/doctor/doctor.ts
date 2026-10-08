@@ -1,7 +1,7 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, PLATFORM_ID, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { Subscription, merge } from 'rxjs';
 import { SessionLifecycleService } from '../core/auth/session-lifecycle.service';
 import { SessionService } from '../core/auth/session.service';
@@ -41,6 +41,9 @@ export class Doctor implements OnInit, OnDestroy {
   private readonly treatmentService = inject(TreatmentService);
   private readonly materialService = inject(MaterialService);
   private readonly language = inject(AppLanguageService);
+  private readonly router = inject(Router);
+  /** The dashboard page shows the same indicators itself, so the shell strip is hidden there. */
+  showStats = !this.router.url.startsWith('/doctor/dashboard');
 
   @ViewChild('globalSearch') globalSearch?: ElementRef<HTMLInputElement>;
   dashboard?: DashboardData;
@@ -84,6 +87,12 @@ export class Doctor implements OnInit, OnDestroy {
       this.loadMessageNotifications();
     }));
     this.loadHeaderData();
+    this.realtimeSubscriptions.add(this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.showStats = !event.urlAfterRedirects.startsWith('/doctor/dashboard');
+        this.cdr.markForCheck();
+      }
+    }));
     this.realtimeSubscriptions.add(this.session.currentUser$.subscribe((user) => {
       if (!user) return;
       this.doctor = { fullName: user.fullName, role: this.roleLabel(user.role), avatar: this.initials(user.fullName) };
