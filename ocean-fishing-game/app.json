@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Ocean Catch",
+    "slug": "ocean-catch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#06304a",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.oceancatch.app" },
+    "android": { "package": "com.oceancatch.app" },
+    "web": { "bundler": "metro" }
+  }
+}
